@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:${PG_VERSION:-18}
+    environment:
+      POSTGRES_PASSWORD: bench
+      POSTGRES_DB: bench
+      # Set by bench.mjs --checksums: '--data-checksums', '--no-data-checksums' (18+), or empty for the version default.
+      POSTGRES_INITDB_ARGS: ${INITDB_ARGS:-}
+    # Same settings for every version (PG_EXTRA adds -c flags for control variants). Larger WAL limits keep checkpoints
+    # out of the 20-second runs; durability settings stay at their defaults
+    # (fsync on, synchronous_commit on), so every claim is a real commit.
+    command: >
+      postgres
+      -c shared_buffers=1GB
+      -c max_connections=200
+      -c max_wal_size=8GB
+      -c checkpoint_timeout=30min
+      ${PG_EXTRA:-}
+    shm_size: 2g
+    volumes:
+      - ./sql:/sql:ro

@@ -1,0 +1,118 @@
+{
+  "host": {
+    "platform": "darwin 25.6.0 arm64",
+    "os": "macOS 26.7.2",
+    "cpu": "Apple M1 Pro",
+    "cpu_count": 10,
+    "memory_gb": 16,
+    "node": "v24.16.0",
+    "docker": "29.7.2 | VM cpus 8 | VM mem 14636363776 | Docker Desktop"
+  },
+  "variants": {
+    "pg15": {
+      "server_version": "15.20 (Debian 15.20-1.pgdg13+1)",
+      "initdb_args": "(version default)",
+      "extra_settings": "(none)",
+      "image_digest": "postgres@sha256:2663a9f0fde52de94f5dad3603a1942359f49472f1017c1a6d64f66bfedacb40",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "off",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    },
+    "pg16": {
+      "server_version": "16.16 (Debian 16.16-1.pgdg13+1)",
+      "initdb_args": "(version default)",
+      "extra_settings": "(none)",
+      "image_digest": "postgres@sha256:dd2bf3ce2dc83a81674cf7f217fcfd8a5009a4b325dda5b843bfee82a06cff6f",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "off",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    },
+    "pg17": {
+      "server_version": "17.11 (Debian 17.11-1.pgdg13+2)",
+      "initdb_args": "(version default)",
+      "extra_settings": "(none)",
+      "image_digest": "postgres@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "off",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    },
+    "pg18": {
+      "server_version": "18.3 (Debian 18.3-1.pgdg13+1)",
+      "initdb_args": "(version default)",
+      "extra_settings": "(none)",
+      "image_digest": "postgres@sha256:a9abf4275f9e99bff8e6aed712b3b7dfec9cac1341bba01c1ffdfce9ff9fc34a",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "on",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "io_method": "worker",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    }
+  },
+  "matrix": {
+    "versions": [
+      15,
+      16,
+      17,
+      18
+    ],
+    "checksums": "default",
+    "strategies": [
+      "for_update",
+      "skip_locked",
+      "advisory"
+    ],
+    "clients": [
+      1,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
+    "reps": 3,
+    "duration": 20,
+    "seedRows": 1000000,
+    "maxThreads": 4,
+    "shuffleSeed": 2026,
+    "variants": []
+  }
+}

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13">
+<rect width="720" height="420" fill="#ffffff"/>
+<text x="70" y="28" font-size="16" font-weight="600" fill="#111">SKIP LOCKED, 16 workers: rows claimed per second over a long run</text>
+<line x1="70" x2="700" y1="340" y2="340" stroke="#e5e7eb"/><text x="62" y="344" text-anchor="end" fill="#4b5563">0</text>
+<line x1="70" x2="700" y1="267.5" y2="267.5" stroke="#e5e7eb"/><text x="62" y="271.5" text-anchor="end" fill="#4b5563">5,000</text>
+<line x1="70" x2="700" y1="195" y2="195" stroke="#e5e7eb"/><text x="62" y="199" text-anchor="end" fill="#4b5563">10,000</text>
+<line x1="70" x2="700" y1="122.5" y2="122.5" stroke="#e5e7eb"/><text x="62" y="126.5" text-anchor="end" fill="#4b5563">15,000</text>
+<line x1="70" x2="700" y1="50" y2="50" stroke="#e5e7eb"/><text x="62" y="54" text-anchor="end" fill="#4b5563">20,000</text>
+<text x="70" y="360" text-anchor="middle" fill="#4b5563">0</text>
+<text x="198.57142857142858" y="360" text-anchor="middle" fill="#4b5563">30</text>
+<text x="327.14285714285717" y="360" text-anchor="middle" fill="#4b5563">60</text>
+<text x="455.7142857142857" y="360" text-anchor="middle" fill="#4b5563">90</text>
+<text x="584.2857142857143" y="360" text-anchor="middle" fill="#4b5563">120</text>
+<text x="385" y="382" text-anchor="middle" fill="#111">Seconds since the run started (queue of 5,000,000 jobs)</text>
+<text transform="translate(18 195) rotate(-90)" text-anchor="middle" fill="#111">Claims per second</text>
+<path d="M91.4,119.2 L117.1,184.5 L138.6,202.5 L160.0,214.6 L181.4,225.6 L207.1,255.2 L228.6,246.7 L254.3,270.2 L275.7,276.2 L297.1,271.3 L322.9,286.2 L344.3,273.7 L365.7,291.5 L391.4,293.1 L417.1,287.6 L438.6,283.8 L460.0,281.2 L485.7,292.9 L507.1,285.2 L528.6,287.9 L554.3,299.7 L575.7,291.5 L601.4,302.9 L622.9,290.7 L644.3,291.7 L670.0,299.9 L691.4,294.7" fill="none" stroke="#d1495b" stroke-width="2.5"/>
+<line x1="70" x2="92" y1="394" y2="394" stroke="#d1495b" stroke-width="3"/><text x="98" y="398" fill="#111">pg17, default autovacuum</text>
+<path d="M91.4,89.0 L112.9,104.1 L138.6,168.8 L160.0,81.0 L181.4,82.4 L202.9,90.2 L228.6,144.7 L250.0,101.7 L271.4,80.9 L292.9,120.7 L318.6,149.4 L340.0,150.0 L361.4,99.7 L382.9,100.9 L408.6,144.2 L430.0,111.4 L451.4,80.3 L472.9,113.7 L498.6,143.7 L520.0,82.7 L541.4,104.0 L567.1,160.4 L588.6,90.4 L610.0,120.3 L631.4,102.2 L657.1,131.0 L678.6,129.4 L700.0,93.8" fill="none" stroke="#2e86ab" stroke-width="2.5"/>
+<line x1="370" x2="392" y1="394" y2="394" stroke="#2e86ab" stroke-width="3"/><text x="398" y="398" fill="#111">pg17, tuned autovacuum</text>
+<path d="M91.4,219.0 L117.1,232.9 L142.9,241.1 L168.6,244.5 L190.0,237.0 L215.7,261.8 L237.1,252.9 L262.9,271.4 L288.6,278.3 L310.0,269.6 L335.7,280.8 L357.1,272.6 L382.9,287.5 L408.6,289.3 L430.0,279.0 L455.7,291.3 L477.1,285.5 L502.9,293.6 L528.6,296.3 L550.0,287.1 L575.7,298.0 L597.1,289.4 L622.9,299.5 L648.6,299.8 L670.0,293.0 L695.7,301.9" fill="none" stroke="#d1495b" stroke-width="2.5" stroke-dasharray="6 4"/>
+<line x1="70" x2="92" y1="412" y2="412" stroke="#d1495b" stroke-width="3" stroke-dasharray="6 4"/><text x="98" y="416" fill="#111">pg18, default autovacuum</text>
+<path d="M91.4,210.6 L117.1,219.6 L138.6,191.0 L164.3,217.9 L185.7,191.1 L211.4,222.6 L237.1,238.4 L258.6,180.3 L284.3,226.4 L305.7,192.7 L331.4,216.2 L357.1,219.9 L378.6,186.3 L404.3,221.7 L425.7,193.5 L451.4,230.2 L472.9,183.2 L498.6,221.9 L524.3,219.5 L545.7,187.5 L571.4,234.0 L597.1,208.7 L618.6,202.0 L644.3,219.0 L670.0,216.0 L691.4,208.0" fill="none" stroke="#2e86ab" stroke-width="2.5" stroke-dasharray="6 4"/>
+<line x1="370" x2="392" y1="412" y2="412" stroke="#2e86ab" stroke-width="3" stroke-dasharray="6 4"/><text x="398" y="416" fill="#111">pg18, tuned autovacuum</text>
+</svg>

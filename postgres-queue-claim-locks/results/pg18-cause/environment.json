@@ -1,0 +1,141 @@
+{
+  "host": {
+    "platform": "darwin 25.6.0 arm64",
+    "os": "macOS 26.7.2",
+    "cpu": "Apple M1 Pro",
+    "cpu_count": 10,
+    "memory_gb": 16,
+    "node": "v24.16.0",
+    "docker": "29.7.2 | VM cpus 8 | VM mem 14636363776 | Docker Desktop"
+  },
+  "variants": {
+    "pg17": {
+      "server_version": "17.11 (Debian 17.11-1.pgdg13+2)",
+      "initdb_args": "(version default)",
+      "extra_settings": "(none)",
+      "image_digest": "postgres@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "off",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    },
+    "pg18": {
+      "server_version": "18.3 (Debian 18.3-1.pgdg13+1)",
+      "initdb_args": "(version default)",
+      "extra_settings": "(none)",
+      "image_digest": "postgres@sha256:a9abf4275f9e99bff8e6aed712b3b7dfec9cac1341bba01c1ffdfce9ff9fc34a",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "on",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "io_method": "worker",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    },
+    "pg18-checksums-off": {
+      "server_version": "18.3 (Debian 18.3-1.pgdg13+1)",
+      "initdb_args": "--no-data-checksums",
+      "extra_settings": "(none)",
+      "image_digest": "postgres@sha256:a9abf4275f9e99bff8e6aed712b3b7dfec9cac1341bba01c1ffdfce9ff9fc34a",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "off",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "io_method": "worker",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    },
+    "pg18-io-sync": {
+      "server_version": "18.3 (Debian 18.3-1.pgdg13+1)",
+      "initdb_args": "(version default)",
+      "extra_settings": "-c io_method=sync",
+      "image_digest": "postgres@sha256:a9abf4275f9e99bff8e6aed712b3b7dfec9cac1341bba01c1ffdfce9ff9fc34a",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "on",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "io_method": "sync",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    },
+    "pg18-both-off": {
+      "server_version": "18.3 (Debian 18.3-1.pgdg13+1)",
+      "initdb_args": "--no-data-checksums",
+      "extra_settings": "-c io_method=sync",
+      "image_digest": "postgres@sha256:a9abf4275f9e99bff8e6aed712b3b7dfec9cac1341bba01c1ffdfce9ff9fc34a",
+      "settings": {
+        "autovacuum": "on",
+        "checkpoint_timeout": "30min",
+        "data_checksums": "off",
+        "fsync": "on",
+        "full_page_writes": "on",
+        "io_method": "sync",
+        "max_connections": "200",
+        "max_wal_size": "8GB",
+        "shared_buffers": "1GB",
+        "synchronous_commit": "on",
+        "wal_level": "replica",
+        "wal_log_hints": "off"
+      }
+    }
+  },
+  "matrix": {
+    "versions": [
+      15,
+      16,
+      17,
+      18
+    ],
+    "checksums": "default",
+    "strategies": [
+      "skip_locked"
+    ],
+    "clients": [
+      1,
+      8,
+      32
+    ],
+    "reps": 3,
+    "duration": 20,
+    "seedRows": 1000000,
+    "maxThreads": 4,
+    "shuffleSeed": 2026,
+    "variants": [
+      "pg17=17",
+      "pg18=18",
+      "pg18-checksums-off=18,checksums=off",
+      "pg18-io-sync=18,io_method=sync",
+      "pg18-both-off=18,checksums=off,io_method=sync"
+    ]
+  }
+}

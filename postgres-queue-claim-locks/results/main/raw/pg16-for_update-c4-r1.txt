@@ -1,0 +1,33 @@
+pgbench (16.16 (Debian 16.16-1.pgdg13+1))
+progress: 1.0 s, 6674.5 tps, lat 0.595 ms stddev 0.910, 0 failed
+progress: 2.0 s, 6477.1 tps, lat 0.616 ms stddev 1.099, 0 failed
+progress: 3.0 s, 6639.0 tps, lat 0.601 ms stddev 1.264, 0 failed
+progress: 4.0 s, 6820.0 tps, lat 0.587 ms stddev 0.923, 0 failed
+progress: 5.0 s, 6446.0 tps, lat 0.619 ms stddev 0.950, 0 failed
+progress: 6.0 s, 6760.0 tps, lat 0.590 ms stddev 0.519, 0 failed
+progress: 7.0 s, 6096.0 tps, lat 0.655 ms stddev 0.657, 0 failed
+progress: 8.0 s, 6665.5 tps, lat 0.599 ms stddev 0.294, 0 failed
+progress: 9.0 s, 6382.6 tps, lat 0.625 ms stddev 0.305, 0 failed
+progress: 10.0 s, 6503.0 tps, lat 0.614 ms stddev 0.261, 0 failed
+progress: 11.0 s, 6554.0 tps, lat 0.609 ms stddev 0.266, 0 failed
+progress: 12.0 s, 6538.3 tps, lat 0.610 ms stddev 0.247, 0 failed
+progress: 13.0 s, 6572.7 tps, lat 0.607 ms stddev 0.244, 0 failed
+progress: 14.0 s, 6815.1 tps, lat 0.586 ms stddev 0.227, 0 failed
+progress: 15.0 s, 6648.8 tps, lat 0.600 ms stddev 0.235, 0 failed
+progress: 16.0 s, 6701.0 tps, lat 0.596 ms stddev 0.248, 0 failed
+progress: 17.0 s, 6076.1 tps, lat 0.657 ms stddev 0.489, 0 failed
+progress: 18.0 s, 6535.9 tps, lat 0.611 ms stddev 0.237, 0 failed
+progress: 19.0 s, 6381.0 tps, lat 0.625 ms stddev 0.272, 0 failed
+transaction type: /sql/workloads/for_update.sql
+scaling factor: 1
+query mode: simple
+number of clients: 4
+number of threads: 4
+maximum number of tries: 1
+duration: 20 s
+number of transactions actually processed: 130746
+number of failed transactions: 0 (0.000%)
+latency average = 0.610 ms
+latency stddev = 0.597 ms
+initial connection time = 3.003 ms
+tps = 6537.961642 (without initial connection time)

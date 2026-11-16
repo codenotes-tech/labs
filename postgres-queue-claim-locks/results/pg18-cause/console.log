@@ -1,0 +1,51 @@
+pg17: 17.11 (Debian 17.11-1.pgdg13+2), data_checksums=off
+pg18: 18.3 (Debian 18.3-1.pgdg13+1), data_checksums=on
+pg18-checksums-off: 18.3 (Debian 18.3-1.pgdg13+1), data_checksums=off
+pg18-io-sync: 18.3 (Debian 18.3-1.pgdg13+1), data_checksums=on, -c io_method=sync
+pg18-both-off: 18.3 (Debian 18.3-1.pgdg13+1), data_checksums=off, -c io_method=sync
+45 runs to go
+[1/45] pg18-both-off skip_locked c=8   rep=1 claims/s=8672 tps=8672 p95=1.411ms empty=0% q1→q4=10426→7629 waits=LWLock:WALWrite=2.4;IO:WalSync=0.8;LWLock:BufferContent=0.3;IO:WalWrite=0
+[2/45] pg18 skip_locked c=8   rep=3 claims/s=8483 tps=8483 p95=1.496ms empty=0% q1→q4=10199→7105 waits=LWLock:WALWrite=2.6;IO:WalSync=0.8;LWLock:BufferContent=0.4;IO:WalWrite=0
+[3/45] pg18-io-sync skip_locked c=32  rep=3 claims/s=6470 tps=6470 p95=10.112ms empty=0% q1→q4=6500→6654 waits=LWLock:BufferContent=14.6;LWLock:WALWrite=7.3;IO:WalSync=0.7;LWLock:LockManager=0.6
+[4/45] pg18 skip_locked c=32  rep=2 claims/s=6612 tps=6612 p95=9.721ms empty=0% q1→q4=6575→6576 waits=LWLock:BufferContent=14.4;LWLock:WALWrite=6.2;IO:WalSync=0.8;Lock:transactionid=0.6
+[5/45] pg18-io-sync skip_locked c=32  rep=1 claims/s=6832 tps=6832 p95=9.471ms empty=0% q1→q4=6821→6976 waits=LWLock:BufferContent=14.2;LWLock:WALWrite=6.8;IO:WalSync=0.7;Lock:transactionid=0.3
+[6/45] pg18-io-sync skip_locked c=32  rep=2 claims/s=6389 tps=6389 p95=10.313ms empty=0% q1→q4=5998→6536 waits=LWLock:BufferContent=14.7;LWLock:WALWrite=6.2;IO:WalSync=0.6;LWLock:LockManager=0.6
+[7/45] pg18-checksums-off skip_locked c=1   rep=1 claims/s=3326 tps=3326 p95=0.419ms empty=0% q1→q4=3691→3019 waits=IO:WalSync=0.3;IO:WalWrite=0
+[8/45] pg18-checksums-off skip_locked c=8   rep=3 claims/s=8132 tps=8132 p95=1.625ms empty=0% q1→q4=10415→6900 waits=LWLock:WALWrite=2.4;IO:WalSync=0.8;LWLock:BufferContent=0.4;IO:WalWrite=0.1
+[9/45] pg18-io-sync skip_locked c=8   rep=3 claims/s=8025 tps=8025 p95=1.538ms empty=0% q1→q4=9364→7004 waits=LWLock:WALWrite=2.4;IO:WalSync=0.8;LWLock:BufferContent=0.4;IO:WalWrite=0.1
+[10/45] pg18-both-off skip_locked c=1   rep=1 claims/s=3489 tps=3489 p95=0.4ms empty=0% q1→q4=4170→2936 waits=IO:WalSync=0.4;IO:DataFileExtend=0
+[11/45] pg18-io-sync skip_locked c=1   rep=1 claims/s=3264 tps=3264 p95=0.45ms empty=0% q1→q4=4107→2999 waits=IO:WalSync=0.3
+[12/45] pg18-both-off skip_locked c=32  rep=2 claims/s=5964 tps=5964 p95=11.399ms empty=0% q1→q4=5808→6325 waits=LWLock:BufferContent=13.9;LWLock:WALWrite=7.7;IO:WalSync=0.8;LWLock:LockManager=0.4
+[13/45] pg18-io-sync skip_locked c=8   rep=2 claims/s=7254 tps=7254 p95=2.024ms empty=0% q1→q4=9899→5182 waits=LWLock:WALWrite=2.8;IO:WalSync=0.8;LWLock:BufferContent=0.5;LWLock:LockManager=0
+[14/45] pg18-both-off skip_locked c=32  rep=1 claims/s=6372 tps=6372 p95=10.349ms empty=0% q1→q4=6804→6843 waits=LWLock:BufferContent=15.3;LWLock:WALWrite=6.6;IO:WalSync=0.7;LWLock:LockManager=0.4
+[15/45] pg18-io-sync skip_locked c=1   rep=3 claims/s=2958 tps=2958 p95=0.603ms empty=0% q1→q4=4153→2472 waits=IO:WalSync=0.4;IO:WalWrite=0
+[16/45] pg18-checksums-off skip_locked c=8   rep=2 claims/s=8462 tps=8462 p95=1.436ms empty=0% q1→q4=9574→7237 waits=LWLock:WALWrite=2.3;IO:WalSync=0.8;LWLock:BufferContent=0.4;IO:WalWrite=0.1
+[17/45] pg17 skip_locked c=32  rep=2 claims/s=11540 tps=11540 p95=5.733ms empty=0% q1→q4=15111→8477 waits=LWLock:WALWrite=9.3;LWLock:BufferContent=8.8;LWLock:LockManager=1.4;IO:WalSync=0.8
+[18/45] pg17 skip_locked c=8   rep=2 claims/s=10821 tps=10821 p95=1.135ms empty=0% q1→q4=13596→8554 waits=LWLock:WALWrite=2.6;IO:WalSync=0.8;LWLock:BufferContent=0.2;LWLock:LockManager=0
+[19/45] pg18-checksums-off skip_locked c=32  rep=1 claims/s=7100 tps=7100 p95=9.044ms empty=0% q1→q4=7573→6726 waits=LWLock:BufferContent=13.6;LWLock:WALWrite=7;IO:WalSync=0.8;Lock:transactionid=0.5
+[20/45] pg18-both-off skip_locked c=1   rep=3 claims/s=3545 tps=3545 p95=0.399ms empty=0% q1→q4=4181→2932 waits=IO:WalSync=0.6;IO:WalWrite=0
+[21/45] pg18-checksums-off skip_locked c=1   rep=2 claims/s=3546 tps=3546 p95=0.38ms empty=0% q1→q4=4218→3115 waits=IO:WalSync=0.4
+[22/45] pg18-both-off skip_locked c=32  rep=3 claims/s=7061 tps=7061 p95=8.961ms empty=0% q1→q4=7311→6973 waits=LWLock:BufferContent=13.1;LWLock:WALWrite=7.7;IO:WalSync=0.8;LWLock:LockManager=0.5
+[23/45] pg18 skip_locked c=32  rep=3 claims/s=7001 tps=7001 p95=9.097ms empty=0% q1→q4=7348→6830 waits=LWLock:BufferContent=14.6;LWLock:WALWrite=6.7;IO:WalSync=0.7;LWLock:LockManager=0.5
+[24/45] pg18-both-off skip_locked c=8   rep=2 claims/s=8667 tps=8667 p95=1.377ms empty=0% q1→q4=10526→7617 waits=LWLock:WALWrite=2.7;IO:WalSync=0.9;LWLock:BufferContent=0.5;IO:WalWrite=0
+[25/45] pg18-both-off skip_locked c=1   rep=2 claims/s=3677 tps=3677 p95=0.349ms empty=0% q1→q4=4393→3248 waits=IO:WalSync=0.4
+[26/45] pg17 skip_locked c=1   rep=1 claims/s=3486 tps=3486 p95=0.377ms empty=0% q1→q4=4061→2913 waits=IO:WalSync=0.3;IO:WalWrite=0
+[27/45] pg18 skip_locked c=32  rep=1 claims/s=5721 tps=5721 p95=11.962ms empty=0% q1→q4=5740→6194 waits=LWLock:BufferContent=13.5;LWLock:WALWrite=7.9;IO:WalSync=0.8;LWLock:LockManager=0.3
+[28/45] pg18-both-off skip_locked c=8   rep=3 claims/s=7916 tps=7916 p95=1.656ms empty=0% q1→q4=9764→6716 waits=LWLock:WALWrite=2.7;IO:WalSync=0.9;LWLock:BufferContent=0.3;IO:WalWrite=0
+[29/45] pg18 skip_locked c=1   rep=3 claims/s=3182 tps=3182 p95=0.527ms empty=0% q1→q4=3966→2716 waits=IO:WalSync=0.4
+[30/45] pg18 skip_locked c=1   rep=1 claims/s=3203 tps=3203 p95=0.492ms empty=0% q1→q4=3784→2868 waits=IO:WalSync=0.3;IO:WalWrite=0
+[31/45] pg17 skip_locked c=8   rep=3 claims/s=10397 tps=10397 p95=1.179ms empty=0% q1→q4=12601→8082 waits=LWLock:WALWrite=2.3;IO:WalSync=0.7;LWLock:BufferContent=0.1;IO:WalWrite=0
+[32/45] pg17 skip_locked c=8   rep=1 claims/s=10388 tps=10388 p95=1.205ms empty=0% q1→q4=12901→8320 waits=LWLock:WALWrite=2.7;IO:WalSync=0.8;LWLock:BufferContent=0.2;IO:WalWrite=0
+[33/45] pg18 skip_locked c=8   rep=1 claims/s=8165 tps=8165 p95=1.504ms empty=0% q1→q4=10236→7742 waits=LWLock:WALWrite=2.7;IO:WalSync=0.8;LWLock:BufferContent=0.3;IO:WalWrite=0
+[34/45] pg18-checksums-off skip_locked c=8   rep=1 claims/s=8347 tps=8347 p95=1.463ms empty=0% q1→q4=9769→7126 waits=LWLock:WALWrite=2.4;IO:WalSync=0.8;LWLock:BufferContent=0.5;IO:WalWrite=0
+[35/45] pg17 skip_locked c=1   rep=3 claims/s=3276 tps=3276 p95=0.445ms empty=0% q1→q4=3985→2621 waits=IO:WalSync=0.3;IO:WalWrite=0
+[36/45] pg17 skip_locked c=1   rep=2 claims/s=3067 tps=3067 p95=0.467ms empty=0% q1→q4=3398→2944 waits=IO:WalSync=0.3
+[37/45] pg18 skip_locked c=1   rep=2 claims/s=3462 tps=3462 p95=0.376ms empty=0% q1→q4=4018→2930 waits=IO:WalSync=0.4;IO:WalWrite=0
+[38/45] pg18-io-sync skip_locked c=8   rep=1 claims/s=8364 tps=8364 p95=1.507ms empty=0% q1→q4=10104→7202 waits=LWLock:WALWrite=2.2;IO:WalSync=0.8;LWLock:BufferContent=0.4;IO:WalWrite=0.1
+[39/45] pg18-checksums-off skip_locked c=32  rep=3 claims/s=5430 tps=5430 p95=12.331ms empty=0% q1→q4=5670→6131 waits=LWLock:BufferContent=13.8;LWLock:WALWrite=8.2;IO:WalSync=0.7;LWLock:LockManager=0.5
+[40/45] pg17 skip_locked c=32  rep=3 claims/s=10015 tps=10015 p95=6.565ms empty=0% q1→q4=13635→8173 waits=LWLock:WALWrite=13.2;LWLock:BufferContent=6.1;LWLock:LockManager=1.2;IO:WalSync=0.8
+[41/45] pg17 skip_locked c=32  rep=1 claims/s=9448 tps=9448 p95=6.783ms empty=0% q1→q4=11776→7704 waits=LWLock:WALWrite=14.8;LWLock:BufferContent=6;LWLock:LockManager=0.9;IO:WalSync=0.8
+[42/45] pg18-checksums-off skip_locked c=32  rep=2 claims/s=5601 tps=5601 p95=12.066ms empty=0% q1→q4=5600→5996 waits=LWLock:BufferContent=14.3;LWLock:WALWrite=7.3;IO:WalSync=0.9;LWLock:LockManager=0.4
+[43/45] pg18-io-sync skip_locked c=1   rep=2 claims/s=3186 tps=3186 p95=0.422ms empty=0% q1→q4=3348→2930 waits=IO:WalSync=0.4
+[44/45] pg18 skip_locked c=8   rep=2 claims/s=8241 tps=8241 p95=1.464ms empty=0% q1→q4=9726→7268 waits=LWLock:WALWrite=2.6;IO:WalSync=0.8;LWLock:BufferContent=0.3;IO:WalWrite=0
+[45/45] pg18-checksums-off skip_locked c=1   rep=3 claims/s=3415 tps=3415 p95=0.389ms empty=0% q1→q4=4138→2839 waits=IO:WalSync=0.4;IO:WalWrite=0
