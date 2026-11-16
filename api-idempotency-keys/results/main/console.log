@@ -1,0 +1,109 @@
+108 runs to go
+[1/108] reserve_release      concurrent_2   rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=161ms
+[2/108] none                 client_retry   rep=3 dup_charges=1800 double_charged=200 success=0 pending=0 error=200 p95=nullms
+[3/108] none                 lost_response  rep=3 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1462ms
+[4/108] redis_lock           client_retry   rep=3 dup_charges=1 double_charged=1 success=200 pending=0 error=0 p95=1342ms
+[5/108] reserve_provider_key client_retry   rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1333ms
+[6/108] reserve              client_retry   rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1331ms
+[7/108] none                 lost_response  rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1458ms
+[8/108] redis_lock           key_reuse      rep=3 rejected=0 wrong_replay=200 charged_new=0 p95=149ms
+[9/108] reserve_release      slow_provider  rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=3053ms
+[10/108] reserve_release      concurrent_2   rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=150ms
+[11/108] reserve              concurrent_2   rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=152ms
+[12/108] reserve              concurrent_2   rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=150ms
+[13/108] redis_lock           key_reuse      rep=2 rejected=0 wrong_replay=200 charged_new=0 p95=153ms
+[14/108] check_then_insert    concurrent_2   rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=172ms
+[15/108] check_then_insert    client_retry   rep=3 dup_charges=205 double_charged=200 success=200 pending=0 error=0 p95=1124ms
+[16/108] reserve              lost_response  rep=2 dup_charges=0 double_charged=0 success=0 pending=200 error=0 p95=nullms
+[17/108] check_then_insert    concurrent_10  rep=1 dup_charges=1786 double_charged=200 success=200 pending=0 error=0 p95=503ms
+[18/108] check_then_insert    lost_response  rep=3 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1460ms
+[19/108] reserve_release      key_reuse      rep=3 rejected=200 wrong_replay=0 charged_new=0 p95=163ms
+[20/108] reserve              concurrent_10  rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=164ms
+[21/108] reserve_release      concurrent_10  rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=153ms
+[22/108] check_then_insert    concurrent_2   rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=249ms
+[23/108] check_then_insert    key_reuse      rep=2 rejected=0 wrong_replay=200 charged_new=0 p95=172ms
+[24/108] reserve_release      lost_response  rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1500ms
+[25/108] none                 lost_response  rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1458ms
+[26/108] reserve_provider_key lost_response  rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1356ms
+[27/108] redis_lock           concurrent_10  rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=155ms
+[28/108] reserve              key_reuse      rep=3 rejected=200 wrong_replay=0 charged_new=0 p95=149ms
+[29/108] check_then_insert    key_reuse      rep=3 rejected=0 wrong_replay=200 charged_new=0 p95=149ms
+[30/108] reserve_provider_key slow_provider  rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=3041ms
+[31/108] redis_lock           client_retry   rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1331ms
+[32/108] reserve              concurrent_10  rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=179ms
+[33/108] reserve_provider_key slow_provider  rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=3052ms
+[34/108] none                 slow_provider  rep=1 dup_charges=800 double_charged=200 success=0 pending=0 error=200 p95=nullms
+[35/108] check_then_insert    concurrent_2   rep=3 dup_charges=191 double_charged=191 success=200 pending=0 error=0 p95=781ms
+[36/108] reserve_release      key_reuse      rep=1 rejected=200 wrong_replay=0 charged_new=0 p95=388ms
+[37/108] reserve_provider_key concurrent_2   rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=276ms
+[38/108] reserve_provider_key client_retry   rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1398ms
+[39/108] redis_lock           slow_provider  rep=3 dup_charges=189 double_charged=189 success=200 pending=0 error=0 p95=4022ms
+[40/108] redis_lock           lost_response  rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1745ms
+[41/108] none                 concurrent_10  rep=1 dup_charges=1800 double_charged=200 success=200 pending=0 error=0 p95=1874ms
+[42/108] none                 client_retry   rep=2 dup_charges=1800 double_charged=200 success=0 pending=0 error=200 p95=nullms
+[43/108] reserve_release      key_reuse      rep=2 rejected=200 wrong_replay=0 charged_new=0 p95=154ms
+[44/108] reserve_provider_key client_retry   rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1332ms
+[45/108] redis_lock           client_retry   rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1330ms
+[46/108] reserve_provider_key concurrent_2   rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=157ms
+[47/108] reserve_release      concurrent_2   rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=150ms
+[48/108] redis_lock           concurrent_2   rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=150ms
+[49/108] redis_lock           concurrent_2   rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=150ms
+[50/108] check_then_insert    client_retry   rep=2 dup_charges=201 double_charged=200 success=200 pending=0 error=0 p95=1132ms
+[51/108] reserve_release      concurrent_10  rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=186ms
+[52/108] check_then_insert    lost_response  rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1456ms
+[53/108] redis_lock           concurrent_10  rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=151ms
+[54/108] redis_lock           slow_provider  rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=3537ms
+[55/108] reserve_provider_key concurrent_2   rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=169ms
+[56/108] reserve_provider_key key_reuse      rep=1 rejected=200 wrong_replay=0 charged_new=0 p95=148ms
+[57/108] reserve_provider_key concurrent_10  rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=166ms
+[58/108] check_then_insert    slow_provider  rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=3022ms
+[59/108] reserve_provider_key concurrent_10  rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=165ms
+[60/108] reserve_provider_key key_reuse      rep=3 rejected=200 wrong_replay=0 charged_new=0 p95=151ms
+[61/108] reserve              concurrent_10  rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=156ms
+[62/108] none                 slow_provider  rep=3 dup_charges=800 double_charged=200 success=0 pending=0 error=200 p95=nullms
+[63/108] reserve              client_retry   rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1334ms
+[64/108] none                 concurrent_2   rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=152ms
+[65/108] check_then_insert    concurrent_10  rep=3 dup_charges=1766 double_charged=199 success=200 pending=0 error=0 p95=549ms
+[66/108] redis_lock           concurrent_10  rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=153ms
+[67/108] redis_lock           slow_provider  rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=3529ms
+[68/108] reserve              slow_provider  rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=3046ms
+[69/108] check_then_insert    slow_provider  rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=3026ms
+[70/108] reserve_release      concurrent_10  rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=190ms
+[71/108] reserve              concurrent_2   rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=149ms
+[72/108] reserve_release      lost_response  rep=3 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1460ms
+[73/108] none                 concurrent_2   rep=3 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=153ms
+[74/108] none                 concurrent_10  rep=3 dup_charges=1800 double_charged=200 success=200 pending=0 error=0 p95=198ms
+[75/108] reserve              lost_response  rep=3 dup_charges=0 double_charged=0 success=0 pending=200 error=0 p95=nullms
+[76/108] reserve_release      client_retry   rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1332ms
+[77/108] reserve_provider_key lost_response  rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1345ms
+[78/108] redis_lock           key_reuse      rep=1 rejected=0 wrong_replay=200 charged_new=0 p95=150ms
+[79/108] reserve_provider_key slow_provider  rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=3041ms
+[80/108] reserve_provider_key key_reuse      rep=2 rejected=200 wrong_replay=0 charged_new=0 p95=150ms
+[81/108] reserve_release      lost_response  rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1460ms
+[82/108] reserve_provider_key lost_response  rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1414ms
+[83/108] reserve              slow_provider  rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=3046ms
+[84/108] reserve_release      client_retry   rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1337ms
+[85/108] reserve_release      slow_provider  rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=3075ms
+[86/108] reserve              lost_response  rep=1 dup_charges=0 double_charged=0 success=0 pending=200 error=0 p95=nullms
+[87/108] check_then_insert    client_retry   rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1128ms
+[88/108] none                 key_reuse      rep=3 rejected=0 wrong_replay=0 charged_new=200 p95=277ms
+[89/108] none                 concurrent_2   rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=152ms
+[90/108] redis_lock           lost_response  rep=3 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1462ms
+[91/108] reserve_release      slow_provider  rep=3 dup_charges=0 double_charged=0 success=199 pending=0 error=0 p95=3087ms
+[92/108] reserve_provider_key concurrent_10  rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=554ms
+[93/108] check_then_insert    lost_response  rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1669ms
+[94/108] none                 key_reuse      rep=2 rejected=0 wrong_replay=0 charged_new=200 p95=604ms
+[95/108] none                 slow_provider  rep=2 dup_charges=800 double_charged=200 success=0 pending=0 error=200 p95=nullms
+[96/108] redis_lock           concurrent_2   rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=528ms
+[97/108] reserve              client_retry   rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1363ms
+[98/108] none                 client_retry   rep=1 dup_charges=1800 double_charged=200 success=0 pending=0 error=200 p95=nullms
+[99/108] none                 concurrent_10  rep=2 dup_charges=1800 double_charged=200 success=200 pending=0 error=0 p95=205ms
+[100/108] check_then_insert    slow_provider  rep=3 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=3020ms
+[101/108] reserve_release      client_retry   rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=1343ms
+[102/108] reserve              key_reuse      rep=1 rejected=200 wrong_replay=0 charged_new=0 p95=149ms
+[103/108] check_then_insert    concurrent_10  rep=2 dup_charges=1800 double_charged=200 success=200 pending=0 error=0 p95=346ms
+[104/108] none                 key_reuse      rep=1 rejected=0 wrong_replay=0 charged_new=200 p95=276ms
+[105/108] reserve              slow_provider  rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=3065ms
+[106/108] reserve              key_reuse      rep=2 rejected=200 wrong_replay=0 charged_new=0 p95=150ms
+[107/108] check_then_insert    key_reuse      rep=1 rejected=0 wrong_replay=200 charged_new=0 p95=147ms
+[108/108] redis_lock           lost_response  rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=1467ms

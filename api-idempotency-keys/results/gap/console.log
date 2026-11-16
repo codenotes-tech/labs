@@ -1,0 +1,22 @@
+21 runs to go
+[1/21] check_then_insert    gap_25         rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=203ms
+[2/21] check_then_insert    gap_50         rep=2 dup_charges=198 double_charged=198 success=200 pending=0 error=0 p95=205ms
+[3/21] check_then_insert    gap_25         rep=3 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=179ms
+[4/21] check_then_insert    gap_50         rep=3 dup_charges=199 double_charged=199 success=200 pending=0 error=0 p95=202ms
+[5/21] check_then_insert    gap_200        rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=213ms
+[6/21] check_then_insert    gap_400        rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=414ms
+[7/21] check_then_insert    gap_0          rep=2 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=155ms
+[8/21] check_then_insert    gap_150        rep=3 dup_charges=10 double_charged=10 success=200 pending=0 error=0 p95=162ms
+[9/21] check_then_insert    gap_400        rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=425ms
+[10/21] check_then_insert    gap_400        rep=2 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=417ms
+[11/21] check_then_insert    gap_150        rep=2 dup_charges=4 double_charged=4 success=200 pending=0 error=0 p95=163ms
+[12/21] check_then_insert    gap_0          rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=154ms
+[13/21] check_then_insert    gap_200        rep=1 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=213ms
+[14/21] check_then_insert    gap_200        rep=3 dup_charges=0 double_charged=0 success=200 pending=0 error=0 p95=213ms
+[15/21] check_then_insert    gap_100        rep=2 dup_charges=105 double_charged=105 success=200 pending=0 error=0 p95=248ms
+[16/21] check_then_insert    gap_25         rep=1 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=177ms
+[17/21] check_then_insert    gap_0          rep=3 dup_charges=200 double_charged=200 success=200 pending=0 error=0 p95=174ms
+[18/21] check_then_insert    gap_100        rep=3 dup_charges=113 double_charged=113 success=200 pending=0 error=0 p95=248ms
+[19/21] check_then_insert    gap_150        rep=1 dup_charges=3 double_charged=3 success=200 pending=0 error=0 p95=161ms
+[20/21] check_then_insert    gap_50         rep=1 dup_charges=198 double_charged=198 success=200 pending=0 error=0 p95=204ms
+[21/21] check_then_insert    gap_100        rep=1 dup_charges=116 double_charged=116 success=200 pending=0 error=0 p95=247ms

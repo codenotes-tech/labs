@@ -1,0 +1,10 @@
+{
+  "name": "api-idempotency-keys-lab",
+  "private": true,
+  "type": "module",
+  "description": "Mock payment provider and API with six idempotency-key implementations, used by run.mjs",
+  "dependencies": {
+    "pg": "8.23.1",
+    "redis": "6.3.1"
+  }
+}

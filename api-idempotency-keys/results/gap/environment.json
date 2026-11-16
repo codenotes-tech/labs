@@ -1,0 +1,193 @@
+{
+  "host": {
+    "os": "macOS 26.7.2",
+    "cpu": "Apple M1 Pro",
+    "cpu_count": 10,
+    "memory_gb": 16,
+    "node": "v24.16.0",
+    "docker": "29.7.2 | VM cpus 8 | VM mem 14636363776"
+  },
+  "containers": {
+    "postgres": "17.11 (Debian 17.11-1.pgdg13+2)",
+    "redis": "Redis server v=8.10.3 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=9de0651bc3cac73e",
+    "node": "v24.22.3",
+    "packages": {
+      "pg": "8.23.1",
+      "redis": "6.3.1"
+    }
+  },
+  "matrix": {
+    "tag": "gap",
+    "impls": [
+      "check_then_insert"
+    ],
+    "scenarios": [
+      "gap_0",
+      "gap_25",
+      "gap_50",
+      "gap_100",
+      "gap_150",
+      "gap_200",
+      "gap_400"
+    ],
+    "reps": 3,
+    "orders": 200,
+    "inflight": 25,
+    "shuffleSeed": 2026
+  },
+  "scenarios": {
+    "concurrent_2": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "burst",
+        "copies": 2
+      }
+    },
+    "concurrent_10": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "burst",
+        "copies": 10
+      }
+    },
+    "client_retry": {
+      "provider": {
+        "latencyMs": 1000,
+        "jitterMs": 100
+      },
+      "api": {},
+      "client": {
+        "kind": "retry",
+        "timeoutMs": 300,
+        "backoffMs": 250,
+        "maxAttempts": 10
+      }
+    },
+    "slow_provider": {
+      "provider": {
+        "latencyMs": 2500,
+        "jitterMs": 250
+      },
+      "api": {
+        "lockTtlMs": 2000
+      },
+      "client": {
+        "kind": "retry",
+        "timeoutMs": 1000,
+        "backoffMs": 500,
+        "maxAttempts": 5
+      }
+    },
+    "lost_response": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50,
+        "loseFirstResponse": true
+      },
+      "api": {
+        "providerTimeoutMs": 1000
+      },
+      "client": {
+        "kind": "retry",
+        "timeoutMs": 3000,
+        "backoffMs": 300,
+        "maxAttempts": 5
+      }
+    },
+    "key_reuse": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "reuse"
+      }
+    },
+    "gap_0": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "gap",
+        "gapMs": 0
+      }
+    },
+    "gap_25": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "gap",
+        "gapMs": 25
+      }
+    },
+    "gap_50": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "gap",
+        "gapMs": 50
+      }
+    },
+    "gap_100": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "gap",
+        "gapMs": 100
+      }
+    },
+    "gap_150": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "gap",
+        "gapMs": 150
+      }
+    },
+    "gap_200": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "gap",
+        "gapMs": 200
+      }
+    },
+    "gap_400": {
+      "provider": {
+        "latencyMs": 100,
+        "jitterMs": 50
+      },
+      "api": {},
+      "client": {
+        "kind": "gap",
+        "gapMs": 400
+      }
+    }
+  }
+}

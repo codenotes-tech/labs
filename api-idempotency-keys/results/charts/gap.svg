@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13">
+<rect width="720" height="400" fill="#ffffff"/>
+<text x="70" y="28" font-size="16" font-weight="600" fill="#111">Check, then insert: payments charged twice by gap between duplicates</text>
+<line x1="70" x2="700" y1="330" y2="330" stroke="#e5e7eb"/><text x="62" y="334" text-anchor="end" fill="#4b5563">0%</text>
+<line x1="70" x2="700" y1="260" y2="260" stroke="#e5e7eb"/><text x="62" y="264" text-anchor="end" fill="#4b5563">25%</text>
+<line x1="70" x2="700" y1="190" y2="190" stroke="#e5e7eb"/><text x="62" y="194" text-anchor="end" fill="#4b5563">50%</text>
+<line x1="70" x2="700" y1="120" y2="120" stroke="#e5e7eb"/><text x="62" y="124" text-anchor="end" fill="#4b5563">75%</text>
+<line x1="70" x2="700" y1="50" y2="50" stroke="#e5e7eb"/><text x="62" y="54" text-anchor="end" fill="#4b5563">100%</text>
+<text x="70" y="350" text-anchor="middle" fill="#4b5563">0</text>
+<text x="109.375" y="350" text-anchor="middle" fill="#4b5563">25</text>
+<text x="148.75" y="350" text-anchor="middle" fill="#4b5563">50</text>
+<text x="227.5" y="350" text-anchor="middle" fill="#4b5563">100</text>
+<text x="306.25" y="350" text-anchor="middle" fill="#4b5563">150</text>
+<text x="385" y="350" text-anchor="middle" fill="#4b5563">200</text>
+<text x="700" y="350" text-anchor="middle" fill="#4b5563">400</text>
+<rect x="148.75" y="50" width="157.5" height="280" fill="#2e86ab" opacity="0.08"/><text x="314.25" y="66" text-anchor="start" fill="#2e86ab">← shaded: provider latency 50–150 ms</text>
+<path d="M70.0,50.0 L109.4,50.0 L148.8,52.8 L227.5,171.8 L306.3,324.4 L385.0,330.0 L700.0,330.0" fill="none" stroke="#d1495b" stroke-width="2.5"/>
+<circle cx="70.0" cy="50.0" r="4" fill="#d1495b"/><circle cx="109.4" cy="50.0" r="4" fill="#d1495b"/><circle cx="148.8" cy="52.8" r="4" fill="#d1495b"/><circle cx="227.5" cy="171.8" r="4" fill="#d1495b"/><circle cx="306.3" cy="324.4" r="4" fill="#d1495b"/><circle cx="385.0" cy="330.0" r="4" fill="#d1495b"/><circle cx="700.0" cy="330.0" r="4" fill="#d1495b"/>
+<text x="385" y="372" text-anchor="middle" fill="#111">Milliseconds between the first request and its duplicate</text>
+<text transform="translate(18 190) rotate(-90)" text-anchor="middle" fill="#111">Payments charged twice</text>
+</svg>
