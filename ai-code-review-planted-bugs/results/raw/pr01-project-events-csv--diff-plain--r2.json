@@ -1,0 +1,132 @@
+{
+  "pr": "pr01-project-events-csv",
+  "condition": "diff-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:25:54.730Z",
+  "duration_ms": 28004,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0330429,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 662,
+    "cache_read_input_tokens": 1109,
+    "output_tokens": 3028,
+    "output_tokens_details": {
+      "thinking_tokens": 1055
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 662,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 3028,
+        "cache_read_input_tokens": 1109,
+        "cache_creation_input_tokens": 662,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 662
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/projects.ts",
+      "line": 63,
+      "severity": "blocking",
+      "title": "Payload column is not valid CSV (double JSON.stringify)",
+      "explanation": "`JSON.stringify(JSON.stringify(payload))` yields a JS string literal with backslash-escaped quotes, e.g. `\"{\\\"a\\\":1}\"`. CSV escapes a quote by doubling it (`\"\"`), not with a backslash. Excel, Sheets and standard parsers will misparse or split these rows, and the payload is the main content of the export. Use a proper CSV escape helper (or a library such as `csv-stringify` or `fast-csv`): serialize the payload once with `JSON.stringify`, replace `\"` with `\"\"`, and wrap the result in quotes."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 63,
+      "severity": "blocking",
+      "title": "`kind` and other fields are not escaped; CSV/formula injection possible",
+      "explanation": "`row.kind` is written raw. A comma, quote or newline in it corrupts the row structure. A value starting with `=`, `+`, `-` or `@` can run as a formula when a customer opens the file in Excel or Sheets. If `kind` or any other column can contain user-influenced data, run every field through one escaping function. That function should quote the field, double embedded quotes, and prefix a `'` (or similar) to values starting with a formula character."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 53,
+      "severity": "blocking",
+      "title": "No visible authorization or project-membership check",
+      "explanation": "The handler reads events for any `projectId` without checking that the caller may access that project. It exports up to 10,000 activity records, which may contain sensitive payloads. Confirm that router-level auth middleware verifies project membership. If the JSON events endpoint does this check inline or via a per-route middleware, reuse it here, and add a test that a user from another project or tenant gets 403 or 404. Also decide how archived projects should behave."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 54,
+      "severity": "non-blocking",
+      "title": "`projectId` is not validated and errors are not handled",
+      "explanation": "`Number('abc')` is `NaN`, which makes Postgres throw. With Express 4, a rejected async handler is not forwarded to the error middleware, so the request can hang and trigger an unhandled rejection. Validate that `projectId` is a positive integer and return 400 otherwise. Wrap the handler in try/catch or an async wrapper that calls `next(err)`."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 55,
+      "severity": "non-blocking",
+      "title": "Whole result set is buffered in memory; no streaming or backpressure",
+      "explanation": "Up to 10,000 rows, each with an unbounded JSON payload, are loaded into memory at once. Concurrent exports could add noticeable memory pressure. `res.write` return values are also ignored, so slow clients cause buffering. Consider streaming with a cursor (`pg-cursor` or `pg-query-stream`) and `pipeline`, and handle client disconnects. Also confirm that an index on `events (project_id, id)` exists so the `ORDER BY id DESC LIMIT` query is cheap."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 53,
+      "severity": "non-blocking",
+      "title": "Expensive endpoint has no rate limiting; response should not be cached",
+      "explanation": "Each request runs a 10k-row query and generates a large response, so it is an easy target for abuse. Apply rate limiting, or a stricter limit than the JSON endpoint. Add `Cache-Control: no-store` since the response contains private data."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 56,
+      "severity": "non-blocking",
+      "title": "Silent truncation at 10,000 rows and duplicated query",
+      "explanation": "Customers asking for the 'activity log' may assume the file is complete. Document the cap, or signal truncation (for example an `X-Truncated` header or a UI note). The query and limit are also hard-coded and copied from the JSON endpoint. Extract a shared query function and a named constant, e.g. `EXPORT_LIMIT`, so the two do not drift apart."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 63,
+      "severity": "non-blocking",
+      "title": "Assumes `created_at` is always a Date",
+      "explanation": "`row.created_at.toISOString()` throws if the column is nullable, or if the pg type parser returns strings. A throw mid-stream, after headers and part of the body have been sent, leaves a truncated file with a 200 status. Ensure the column is NOT NULL, or handle it defensively. Build the whole body, or validate the data, before writing the headers."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 59,
+      "severity": "nit",
+      "title": "Content-Type lacks charset; Excel may mangle UTF-8",
+      "explanation": "Use `text/csv; charset=utf-8`. Consider a UTF-8 BOM if customers open the file directly in Excel and payloads contain non-ASCII characters."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 61,
+      "severity": "nit",
+      "title": "Column order differs from the SELECT and the header is hand-maintained",
+      "explanation": "The SELECT order is `id, kind, payload, created_at` but the CSV order is `id, kind, created_at, payload`. Define the columns once and derive both the header and the row values from that list to avoid drift."
+    },
+    {
+      "file": null,
+      "line": null,
+      "severity": "non-blocking",
+      "title": "No tests",
+      "explanation": "Add tests for CSV escaping (commas, quotes, newlines, formula prefixes, null payload), invalid `projectId`, the authorization failure case, and the 10,000-row cap."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/projects.ts\", \"line\": 63, \"severity\": \"blocking\", \"title\": \"Payload column is not valid CSV (double JSON.stringify)\", \"explanation\": \"`JSON.stringify(JSON.stringify(payload))` yields a JS string literal with backslash-escaped quotes, e.g. `\\\"{\\\\\\\"a\\\\\\\":1}\\\"`. CSV escapes a quote by doubling it (`\\\"\\\"`), not with a backslash. Excel, Sheets and standard parsers will misparse or split these rows, and the payload is the main content of the export. Use a proper CSV escape helper (or a library such as `csv-stringify` or `fast-csv`): serialize the payload once with `JSON.stringify`, replace `\\\"` with `\\\"\\\"`, and wrap the result in quotes.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 63, \"severity\": \"blocking\", \"title\": \"`kind` and other fields are not escaped; CSV/formula injection possible\", \"explanation\": \"`row.kind` is written raw. A comma, quote or newline in it corrupts the row structure. A value starting with `=`, `+`, `-` or `@` can run as a formula when a customer opens the file in Excel or Sheets. If `kind` or any other column can contain user-influenced data, run every field through one escaping function. That function should quote the field, double embedded quotes, and prefix a `'` (or similar) to values starting with a formula character.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 53, \"severity\": \"blocking\", \"title\": \"No visible authorization or project-membership check\", \"explanation\": \"The handler reads events for any `projectId` without checking that the caller may access that project. It exports up to 10,000 activity records, which may contain sensitive payloads. Confirm that router-level auth middleware verifies project membership. If the JSON events endpoint does this check inline or via a per-route middleware, reuse it here, and add a test that a user from another project or tenant gets 403 or 404. Also decide how archived projects should behave.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 54, \"severity\": \"non-blocking\", \"title\": \"`projectId` is not validated and errors are not handled\", \"explanation\": \"`Number('abc')` is `NaN`, which makes Postgres throw. With Express 4, a rejected async handler is not forwarded to the error middleware, so the request can hang and trigger an unhandled rejection. Validate that `projectId` is a positive integer and return 400 otherwise. Wrap the handler in try/catch or an async wrapper that calls `next(err)`.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 55, \"severity\": \"non-blocking\", \"title\": \"Whole result set is buffered in memory; no streaming or backpressure\", \"explanation\": \"Up to 10,000 rows, each with an unbounded JSON payload, are loaded into memory at once. Concurrent exports could add noticeable memory pressure. `res.write` return values are also ignored, so slow clients cause buffering. Consider streaming with a cursor (`pg-cursor` or `pg-query-stream`) and `pipeline`, and handle client disconnects. Also confirm that an index on `events (project_id, id)` exists so the `ORDER BY id DESC LIMIT` query is cheap.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 53, \"severity\": \"non-blocking\", \"title\": \"Expensive endpoint has no rate limiting; response should not be cached\", \"explanation\": \"Each request runs a 10k-row query and generates a large response, so it is an easy target for abuse. Apply rate limiting, or a stricter limit than the JSON endpoint. Add `Cache-Control: no-store` since the response contains private data.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 56, \"severity\": \"non-blocking\", \"title\": \"Silent truncation at 10,000 rows and duplicated query\", \"explanation\": \"Customers asking for the 'activity log' may assume the file is complete. Document the cap, or signal truncation (for example an `X-Truncated` header or a UI note). The query and limit are also hard-coded and copied from the JSON endpoint. Extract a shared query function and a named constant, e.g. `EXPORT_LIMIT`, so the two do not drift apart.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 63, \"severity\": \"non-blocking\", \"title\": \"Assumes `created_at` is always a Date\", \"explanation\": \"`row.created_at.toISOString()` throws if the column is nullable, or if the pg type parser returns strings. A throw mid-stream, after headers and part of the body have been sent, leaves a truncated file with a 200 status. Ensure the column is NOT NULL, or handle it defensively. Build the whole body, or validate the data, before writing the headers.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 59, \"severity\": \"nit\", \"title\": \"Content-Type lacks charset; Excel may mangle UTF-8\", \"explanation\": \"Use `text/csv; charset=utf-8`. Consider a UTF-8 BOM if customers open the file directly in Excel and payloads contain non-ASCII characters.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 61, \"severity\": \"nit\", \"title\": \"Column order differs from the SELECT and the header is hand-maintained\", \"explanation\": \"The SELECT order is `id, kind, payload, created_at` but the CSV order is `id, kind, created_at, payload`. Define the columns once and derive both the header and the row values from that list to avoid drift.\"}, {\"file\": null, \"line\": null, \"severity\": \"non-blocking\", \"title\": \"No tests\", \"explanation\": \"Add tests for CSV escaping (commas, quotes, newlines, formula prefixes, null payload), invalid `projectId`, the authorization failure case, and the 10,000-row cap.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add CSV export for project events\n\nCustomers asked to download a project's activity log. Adds `GET /projects/:projectId/events.csv`, which returns the latest 10,000 events as CSV. Same query as the JSON events endpoint, larger limit.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/projects.ts b/src/routes/projects.ts\nindex c30f46c..b019274 100644\n--- a/src/routes/projects.ts\n+++ b/src/routes/projects.ts\n@@ -49,3 +49,18 @@ projectsRouter.delete('/:projectId', async (req, res) => {\n   await pool.query('UPDATE projects SET archived_at = now() WHERE id = $1', [projectId])\n   res.status(204).end()\n })\n+\n+projectsRouter.get('/:projectId/events.csv', async (req, res) => {\n+  const projectId = Number(req.params.projectId)\n+  const { rows } = await pool.query(\n+    'SELECT id, kind, payload, created_at FROM events WHERE project_id = $1 ORDER BY id DESC LIMIT 10000',\n+    [projectId],\n+  )\n+  res.setHeader('content-type', 'text/csv')\n+  res.setHeader('content-disposition', `attachment; filename=\"project-${projectId}-events.csv\"`)\n+  res.write('id,kind,created_at,payload\\n')\n+  for (const row of rows) {\n+    res.write([row.id, row.kind, row.created_at.toISOString(), JSON.stringify(JSON.stringify(row.payload))].join(',') + '\\n')\n+  }\n+  res.end()\n+})\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

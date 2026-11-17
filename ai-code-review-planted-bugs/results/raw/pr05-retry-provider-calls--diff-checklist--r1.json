@@ -1,0 +1,104 @@
+{
+  "pr": "pr05-retry-provider-calls",
+  "condition": "diff-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:29:47.541Z",
+  "duration_ms": 15021,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0159263,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 664,
+    "cache_read_input_tokens": 1263,
+    "output_tokens": 1314,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 664,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1314,
+        "cache_read_input_tokens": 1263,
+        "cache_creation_input_tokens": 664,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 664
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/payments.ts",
+      "line": 23,
+      "severity": "blocking",
+      "title": "Retrying a non-idempotent charge can double-charge customers",
+      "explanation": "A timeout or 502 does not mean the provider failed to process the charge. The request may have succeeded and the response was lost or the gateway failed after the provider committed. Retrying createCharge without an idempotency key can create a second charge for the same invoice. Pass a stable idempotency key (for example derived from the invoice id and org id, or a per-attempt-group key stored in the DB) to the provider on every attempt, and verify that the provider honors it. Do not ship this retry without it."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": 23,
+      "severity": "blocking",
+      "title": "No guard against concurrent payment requests for the same invoice",
+      "explanation": "The invoice is read and then charged without a lock or status transition. Combined with retries (which lengthen the window) and customers pressing Pay again, two requests can both pass the 'payable' check and both charge. Use SELECT ... FOR UPDATE inside a transaction, or atomically mark the invoice as 'processing' before calling the provider, and add a unique constraint on payments(invoice_id) (or on provider_charge_id) as a backstop."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": 23,
+      "severity": "blocking",
+      "title": "Charge succeeds but the payments INSERT can fail, with no recovery",
+      "explanation": "If the DB insert after the charge fails, the customer is charged with no record, and the invoice stays payable, so the next attempt charges again. Retries make this path more likely to matter. Record a pending payment row with the idempotency key before calling the provider, then update it after the charge, and reconcile via provider webhooks or a job. Handle and log the failure explicitly."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": 23,
+      "severity": "non-blocking",
+      "title": "Retry budget and total latency are not bounded for an HTTP request",
+      "explanation": "withRetry with backoff runs inside the request handler. Several attempts with timeouts can exceed the client, load balancer, or proxy timeout, so the customer sees a failure and presses Pay again while retries are still running, which compounds the duplicate-charge risk. Confirm the max attempts, per-attempt timeout, and total deadline are small and set explicitly for this call site rather than relying on defaults."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": 23,
+      "severity": "non-blocking",
+      "title": "Unclear which errors withRetry treats as retryable",
+      "explanation": "The description says it retries timeouts and 5xx. A 5xx other than 502/503/504 (for example a 500 from a provider bug mid-processing) or a timeout after the request was sent are the riskiest to retry for payments. Consider restricting retries for this call to errors where the request is known not to have been processed (connection refused, DNS failure, 429/503 with explicit semantics), or rely on idempotency keys to make broader retries safe. Never retry 4xx such as card declines."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": 23,
+      "severity": "non-blocking",
+      "title": "No logging or metrics for retries and final failure",
+      "explanation": "Logger is imported but retry attempts are not logged. Add structured logs (invoice id, attempt number, error class, never card or customer secrets) and a metric so you can verify the change reduces failures and detect duplicate-charge anomalies. Also make sure the handler returns a clear error response (for example 502/504) when all retries fail rather than an unhandled rejection."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": null,
+      "severity": "nit",
+      "title": "No tests for the retry behavior",
+      "explanation": "Add tests covering: transient failure then success, persistent failure, no retry on a 4xx decline, and that the same idempotency key is sent on each attempt."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/payments.ts\", \"line\": 23, \"severity\": \"blocking\", \"title\": \"Retrying a non-idempotent charge can double-charge customers\", \"explanation\": \"A timeout or 502 does not mean the provider failed to process the charge. The request may have succeeded and the response was lost or the gateway failed after the provider committed. Retrying createCharge without an idempotency key can create a second charge for the same invoice. Pass a stable idempotency key (for example derived from the invoice id and org id, or a per-attempt-group key stored in the DB) to the provider on every attempt, and verify that the provider honors it. Do not ship this retry without it.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": 23, \"severity\": \"blocking\", \"title\": \"No guard against concurrent payment requests for the same invoice\", \"explanation\": \"The invoice is read and then charged without a lock or status transition. Combined with retries (which lengthen the window) and customers pressing Pay again, two requests can both pass the 'payable' check and both charge. Use SELECT ... FOR UPDATE inside a transaction, or atomically mark the invoice as 'processing' before calling the provider, and add a unique constraint on payments(invoice_id) (or on provider_charge_id) as a backstop.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": 23, \"severity\": \"blocking\", \"title\": \"Charge succeeds but the payments INSERT can fail, with no recovery\", \"explanation\": \"If the DB insert after the charge fails, the customer is charged with no record, and the invoice stays payable, so the next attempt charges again. Retries make this path more likely to matter. Record a pending payment row with the idempotency key before calling the provider, then update it after the charge, and reconcile via provider webhooks or a job. Handle and log the failure explicitly.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": 23, \"severity\": \"non-blocking\", \"title\": \"Retry budget and total latency are not bounded for an HTTP request\", \"explanation\": \"withRetry with backoff runs inside the request handler. Several attempts with timeouts can exceed the client, load balancer, or proxy timeout, so the customer sees a failure and presses Pay again while retries are still running, which compounds the duplicate-charge risk. Confirm the max attempts, per-attempt timeout, and total deadline are small and set explicitly for this call site rather than relying on defaults.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": 23, \"severity\": \"non-blocking\", \"title\": \"Unclear which errors withRetry treats as retryable\", \"explanation\": \"The description says it retries timeouts and 5xx. A 5xx other than 502/503/504 (for example a 500 from a provider bug mid-processing) or a timeout after the request was sent are the riskiest to retry for payments. Consider restricting retries for this call to errors where the request is known not to have been processed (connection refused, DNS failure, 429/503 with explicit semantics), or rely on idempotency keys to make broader retries safe. Never retry 4xx such as card declines.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": 23, \"severity\": \"non-blocking\", \"title\": \"No logging or metrics for retries and final failure\", \"explanation\": \"Logger is imported but retry attempts are not logged. Add structured logs (invoice id, attempt number, error class, never card or customer secrets) and a metric so you can verify the change reduces failures and detect duplicate-charge anomalies. Also make sure the handler returns a clear error response (for example 502/504) when all retries fail rather than an unhandled rejection.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": null, \"severity\": \"nit\", \"title\": \"No tests for the retry behavior\", \"explanation\": \"Add tests covering: transient failure then success, persistent failure, no retry on a 4xx decline, and that the same idempotency key is sent on each attempt.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Retry payment provider calls on transient errors\n\nWe see a handful of provider timeouts and 502s a day, and customers have to press Pay again. This wraps the charge call in our existing `withRetry` helper, which already retries timeouts and 5xx responses with backoff.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/payments.ts b/src/routes/payments.ts\nindex 145304a..3f7c30c 100644\n--- a/src/routes/payments.ts\n+++ b/src/routes/payments.ts\n@@ -2,6 +2,7 @@ import { Router } from 'express'\n import { z } from 'zod'\n import { pool } from '../db.js'\n import { createCharge } from '../lib/provider.js'\n+import { withRetry } from '../lib/retry.js'\n import { logger } from '../lib/logger.js'\n \n export const paymentsRouter = Router()\n@@ -19,11 +20,13 @@ paymentsRouter.post('/', async (req, res) => {\n   const invoice = rows[0]\n   if (!invoice) return res.status(404).json({ error: 'invoice_not_payable' })\n \n-  const charge = await createCharge({\n-    amount: Number(invoice.amount),\n-    currency: invoice.currency,\n-    customerId: invoice.provider_customer_id,\n-  })\n+  const charge = await withRetry(() =>\n+    createCharge({\n+      amount: Number(invoice.amount),\n+      currency: invoice.currency,\n+      customerId: invoice.provider_customer_id,\n+    }),\n+  )\n \n   await pool.query(\n     `INSERT INTO payments (org_id, invoice_id, provider_charge_id, amount, status) VALUES ($1, $2, $3, $4, $5)`,\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

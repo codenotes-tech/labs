@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13">
+<rect width="760" height="330" fill="#ffffff"/>
+<text x="20" y="28" font-size="16" font-weight="600" fill="#111">Claude Code as PR reviewer: what the context changed</text>
+<text x="170" y="52" font-weight="600" fill="#111">Caught the repo-only role check (of 3 runs)</text>
+<text x="470" y="52" font-weight="600" fill="#111">Comments on a clean PR (mean)</text>
+<text x="158" y="86" text-anchor="end" fill="#111">Diff only</text>
+<rect x="170" y="70" width="230" height="24" fill="#f1f5f9"/><rect x="170" y="70" width="0" height="24" fill="#2e86ab"/><text x="182" y="87" fill="#111">0/3</text>
+<rect x="470" y="70" width="230" height="24" fill="#f1f5f9"/><rect x="470" y="70" width="198.05555555555557" height="24" fill="#d1495b"/><text x="676.0555555555555" y="87" fill="#111">3.4</text>
+<text x="158" y="138" text-anchor="end" fill="#111">Diff + checklist</text>
+<rect x="170" y="122" width="230" height="24" fill="#f1f5f9"/><rect x="170" y="122" width="76.66666666666666" height="24" fill="#f4c27a"/><rect x="170" y="122" width="0" height="24" fill="#2e86ab"/><text x="254.66666666666666" y="139" fill="#111">1/3 (as a nit)</text>
+<rect x="470" y="122" width="230" height="24" fill="#f1f5f9"/><rect x="470" y="122" width="108.61111111111111" height="24" fill="#d1495b"/><text x="586.6111111111111" y="139" fill="#111">1.9</text>
+<text x="158" y="190" text-anchor="end" fill="#111">Whole repo</text>
+<rect x="170" y="174" width="230" height="24" fill="#f1f5f9"/><rect x="170" y="174" width="230" height="24" fill="#2e86ab"/><text x="408" y="191" fill="#111">3/3</text>
+<rect x="470" y="174" width="230" height="24" fill="#f1f5f9"/><rect x="470" y="174" width="76.66666666666666" height="24" fill="#d1495b"/><text x="554.6666666666666" y="191" fill="#111">1.3</text>
+<text x="158" y="242" text-anchor="end" fill="#111">Whole repo + checklist</text>
+<rect x="170" y="226" width="230" height="24" fill="#f1f5f9"/><rect x="170" y="226" width="230" height="24" fill="#2e86ab"/><text x="408" y="243" fill="#111">3/3</text>
+<rect x="470" y="226" width="230" height="24" fill="#f1f5f9"/><rect x="470" y="226" width="57.5" height="24" fill="#d1495b"/><text x="535.5" y="243" fill="#111">1.0</text>
+<text x="20" y="312" fill="#4b5563">All 9 textbook bugs (injection, race, off-by-one, retried charge, ...) were caught as blocking in every run of every condition.</text>
+</svg>

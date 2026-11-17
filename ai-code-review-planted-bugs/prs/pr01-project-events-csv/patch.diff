@@ -1,0 +1,23 @@
+diff --git a/src/routes/projects.ts b/src/routes/projects.ts
+index c30f46c..b019274 100644
+--- a/src/routes/projects.ts
++++ b/src/routes/projects.ts
+@@ -49,3 +49,18 @@ projectsRouter.delete('/:projectId', async (req, res) => {
+   await pool.query('UPDATE projects SET archived_at = now() WHERE id = $1', [projectId])
+   res.status(204).end()
+ })
++
++projectsRouter.get('/:projectId/events.csv', async (req, res) => {
++  const projectId = Number(req.params.projectId)
++  const { rows } = await pool.query(
++    'SELECT id, kind, payload, created_at FROM events WHERE project_id = $1 ORDER BY id DESC LIMIT 10000',
++    [projectId],
++  )
++  res.setHeader('content-type', 'text/csv')
++  res.setHeader('content-disposition', `attachment; filename="project-${projectId}-events.csv"`)
++  res.write('id,kind,created_at,payload\n')
++  for (const row of rows) {
++    res.write([row.id, row.kind, row.created_at.toISOString(), JSON.stringify(JSON.stringify(row.payload))].join(',') + '\n')
++  }
++  res.end()
++})

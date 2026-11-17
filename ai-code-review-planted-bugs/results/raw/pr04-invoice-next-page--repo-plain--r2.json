@@ -1,0 +1,78 @@
+{
+  "pr": "pr04-invoice-next-page",
+  "condition": "repo-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:26:24.806Z",
+  "duration_ms": 9886,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 2,
+  "cost_usd": 0.0164874,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 2439,
+    "cache_read_input_tokens": 7134,
+    "output_tokens": 601,
+    "output_tokens_details": {
+      "thinking_tokens": 75
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2439,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 420,
+        "cache_read_input_tokens": 4356,
+        "cache_creation_input_tokens": 861,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 861
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-yp92mR/src/routes/invoices.ts"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-yp92mR/src/routes/invoices.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 25,
+      "severity": "blocking",
+      "title": "Off-by-one slice drops the newest invoice on every page",
+      "explanation": "`rows.slice(1, limit + 1)` skips the first row, which is the newest invoice. Every page therefore loses one invoice and returns only `limit - 1` items when more pages exist. When `rows.length` is `limit + 1`, `slice(1, limit + 1)` returns `limit` rows and still omits `rows[0]`. Because `next_before` is taken from the last row of the slice, the cursor stays correct, so the omitted invoice is never fetched by any later request. Use `rows.slice(0, limit)`."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 28,
+      "severity": "non-blocking",
+      "title": "No test coverage for the pagination boundary cases",
+      "explanation": "The change targets an edge case (last page exactly full) and the bug above would have been caught by a basic test. Add tests for these cases: fewer than `limit` rows, exactly `limit` rows (`next_before` must be null), `limit + 1` rows (`next_before` set, and the first row present in the response), and a follow-up request using the returned cursor."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/invoices.ts\", \"line\": 25, \"severity\": \"blocking\", \"title\": \"Off-by-one slice drops the newest invoice on every page\", \"explanation\": \"`rows.slice(1, limit + 1)` skips the first row, which is the newest invoice. Every page therefore loses one invoice and returns only `limit - 1` items when more pages exist. When `rows.length` is `limit + 1`, `slice(1, limit + 1)` returns `limit` rows and still omits `rows[0]`. Because `next_before` is taken from the last row of the slice, the cursor stays correct, so the omitted invoice is never fetched by any later request. Use `rows.slice(0, limit)`.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 28, \"severity\": \"non-blocking\", \"title\": \"No test coverage for the pagination boundary cases\", \"explanation\": \"The change targets an edge case (last page exactly full) and the bug above would have been caught by a basic test. Add tests for these cases: fewer than `limit` rows, exactly `limit` rows (`next_before` must be null), `limit + 1` rows (`next_before` set, and the first row present in the response), and a follow-up request using the returned cursor.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Fix next_before when the last page is exactly full\n\nWhen the last page had exactly `limit` invoices, `next_before` was still set, so the web app made one extra request that came back empty. This fetches `limit + 1` rows to know whether another page exists.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex b9edb19..8e99e4e 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -19,11 +19,13 @@ invoicesRouter.get('/', async (req, res) => {\n       WHERE org_id = $1 AND ($2::bigint IS NULL OR id < $2)\n       ORDER BY id DESC\n       LIMIT $3`,\n-    [req.user.orgId, before ?? null, limit],\n+    [req.user.orgId, before ?? null, limit + 1],\n   )\n+  const hasMore = rows.length > limit\n+  const page = rows.slice(1, limit + 1)\n   res.json({\n-    invoices: rows.map(serializeInvoice),\n-    next_before: rows.length === limit ? rows[rows.length - 1].id : null,\n+    invoices: page.map(serializeInvoice),\n+    next_before: hasMore ? page[page.length - 1].id : null,\n   })\n })\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

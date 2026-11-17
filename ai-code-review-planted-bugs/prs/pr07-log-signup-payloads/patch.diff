@@ -1,0 +1,12 @@
+diff --git a/src/routes/auth.ts b/src/routes/auth.ts
+index 0a32b6e..7a516be 100644
+--- a/src/routes/auth.ts
++++ b/src/routes/auth.ts
+@@ -14,6 +14,7 @@ const signupSchema = z.object({
+ })
+ 
+ authRouter.post('/signup', async (req, res) => {
++  logger.info('signup attempt', { body: req.body })
+   const { email, password, organization } = signupSchema.parse(req.body)
+   const passwordHash = await hashPassword(password)
+   const { rows } = await pool.query(

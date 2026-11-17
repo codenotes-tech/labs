@@ -1,0 +1,85 @@
+{
+  "pr": "pr12-document-env-vars",
+  "condition": "repo-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:27:12.843Z",
+  "duration_ms": 11884,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.015434,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 1787,
+    "cache_read_input_tokens": 13140,
+    "output_tokens": 696,
+    "output_tokens_details": {
+      "thinking_tokens": 85
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 1787,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 300,
+        "cache_read_input_tokens": 5056,
+        "cache_creation_input_tokens": 446,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 446
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "process\\.env|env\\.",
+        "output_mode": "content",
+        "glob": "!node_modules/**"
+      }
+    },
+    {
+      "tool": "Glob",
+      "input": {
+        "pattern": "{.env*,src/**/*.ts,docker*,*.yml,*.yaml}"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "\\benv\\b|import\\.meta|SECRET|LOG_LEVEL|NODE_ENV",
+        "output_mode": "content",
+        "path": "src"
+      }
+    }
+  ],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "README.md",
+      "line": 17,
+      "severity": "nit",
+      "title": "Documented \"required\" status of PAYMENT_PROVIDER_KEY is not enforced",
+      "explanation": "The table marks `PAYMENT_PROVIDER_KEY` as required. The code in `src/lib/provider.ts` (lines 23 and 42) interpolates `process.env.PAYMENT_PROVIDER_KEY` directly, and nothing validates it at startup. If the variable is missing, the API sends `Authorization: Bearer undefined` to the provider and fails at request time. The same applies to `DATABASE_URL`, where `pg` silently falls back to its own defaults. The docs are accurate about intent, but I suggest adding a fail-fast check at startup and noting in the README that the service will not start without these variables. This can be a follow-up and does not block the PR."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"README.md\", \"line\": 17, \"severity\": \"nit\", \"title\": \"Documented \\\"required\\\" status of PAYMENT_PROVIDER_KEY is not enforced\", \"explanation\": \"The table marks `PAYMENT_PROVIDER_KEY` as required. The code in `src/lib/provider.ts` (lines 23 and 42) interpolates `process.env.PAYMENT_PROVIDER_KEY` directly, and nothing validates it at startup. If the variable is missing, the API sends `Authorization: Bearer undefined` to the provider and fails at request time. The same applies to `DATABASE_URL`, where `pg` silently falls back to its own defaults. The docs are accurate about intent, but I suggest adding a fail-fast check at startup and noting in the README that the service will not start without these variables. This can be a follow-up and does not block the PR.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Document environment variables\n\nLists the environment variables the API reads, with their defaults.\n\n## Diff\n\n```diff\ndiff --git a/README.md b/README.md\nindex c454bb1..9513c3f 100644\n--- a/README.md\n+++ b/README.md\n@@ -9,6 +9,15 @@ Billing API for Acme's project management product: organizations, projects, invo\n \n Deploys are rolling: old and new versions of the API serve traffic together during a release.\n \n+## Configuration\n+\n+| Variable | Required | Default | Used by |\n+| --- | --- | --- | --- |\n+| `DATABASE_URL` | yes | none | `src/db.ts` |\n+| `PORT` | no | `3000` | `src/server.ts` |\n+| `PAYMENT_PROVIDER_URL` | no | `https://api.payments.example` | `src/lib/provider.ts` |\n+| `PAYMENT_PROVIDER_KEY` | yes | none | `src/lib/provider.ts` |\n+\n ## Running locally\n \n ```bash\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

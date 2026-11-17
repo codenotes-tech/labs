@@ -1,0 +1,115 @@
+{
+  "pr": "pr05-retry-provider-calls",
+  "condition": "repo-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:24:42.282Z",
+  "duration_ms": 18259,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 5,
+  "cost_usd": 0.0343007,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 4434,
+    "cache_read_input_tokens": 14027,
+    "output_tokens": 1515,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 4434,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1028,
+        "cache_read_input_tokens": 6741,
+        "cache_creation_input_tokens": 471,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 471
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cRLmAD/src/routes/payments.ts"
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cRLmAD/src/lib/retry.ts"
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cRLmAD/src/lib/provider.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "External calls",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cRLmAD/docs/CONVENTIONS.md",
+        "output_mode": "content",
+        "-A": 15
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cRLmAD/src/routes/payments.ts",
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cRLmAD/src/lib/retry.ts",
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cRLmAD/src/lib/provider.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/payments.ts",
+      "line": 23,
+      "severity": "blocking",
+      "title": "Card charge is retried without an idempotency key, so customers can be double-charged",
+      "explanation": "`createCharge` accepts an optional `idempotencyKey`, but this call doesn't pass one. A timeout or 502 doesn't prove the provider didn't process the charge. The provider may have charged the card and the response was lost. `withRetry` then sends a brand-new charge request, and the customer can be charged up to 3 times. `docs/CONVENTIONS.md` (External calls) forbids wrapping a card charge in `withRetry` unless the request carries an idempotency key the provider honors, and the comment in `retry.ts` says the same. To fix it, generate a stable key per payment attempt and pass it on every retry. For example, derive it from the invoice id plus a stored attempt id, and create it once outside the retry closure. Confirm the provider honors the `idempotency-key` header. Add a test showing that retries reuse the same key."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": 31,
+      "severity": "non-blocking",
+      "title": "Concurrent or repeated Pay requests can still double-charge, and a failed DB write loses the charge record",
+      "explanation": "The invoice is selected with `status = 'open'` but isn't locked or claimed before charging. Two concurrent requests, for example a double click or a client retry after a long retry window, can both pass the check and both charge. Retries make the request longer, which widens this window. The charge is also recorded only after it succeeds. If the INSERT fails, the customer has been charged with no local record. Consider claiming the invoice first (`SELECT ... FOR UPDATE`, or a 'pending' payment row with a unique constraint on the invoice) and using the same idempotency key per invoice."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": 23,
+      "severity": "non-blocking",
+      "title": "Worst-case latency is now about 30s plus backoff, and there is no test coverage",
+      "explanation": "Each attempt can take up to 10s (provider timeout), and there are 3 attempts plus 200ms and 400ms of backoff, so the HTTP request can run for over 30s. That may exceed the load balancer or client timeout, and the client would then press Pay again anyway. Check the timeouts at those layers, or lower the attempt count or per-attempt timeout. The PR also adds no tests for the retry behavior, such as retry on a 502, no retry on a 4xx, and the same idempotency key across retries."
+    },
+    {
+      "file": "src/routes/payments.ts",
+      "line": 12,
+      "severity": "nit",
+      "title": "No error handling around the charge",
+      "explanation": "If retries are exhausted, the `ProviderError` propagates from an async Express handler. Depending on the Express version and error middleware, this may become an unhandled rejection or a generic 500. Consider catching `ProviderError` and returning a clear 502/503 so clients can show a useful message. Also log the retry attempts so the provider failure rate stays visible."
+    }
+  ],
+  "result_text": "```json\n{\"findings\": [{\"file\": \"src/routes/payments.ts\", \"line\": 23, \"severity\": \"blocking\", \"title\": \"Card charge is retried without an idempotency key, so customers can be double-charged\", \"explanation\": \"`createCharge` accepts an optional `idempotencyKey`, but this call doesn't pass one. A timeout or 502 doesn't prove the provider didn't process the charge. The provider may have charged the card and the response was lost. `withRetry` then sends a brand-new charge request, and the customer can be charged up to 3 times. `docs/CONVENTIONS.md` (External calls) forbids wrapping a card charge in `withRetry` unless the request carries an idempotency key the provider honors, and the comment in `retry.ts` says the same. To fix it, generate a stable key per payment attempt and pass it on every retry. For example, derive it from the invoice id plus a stored attempt id, and create it once outside the retry closure. Confirm the provider honors the `idempotency-key` header. Add a test showing that retries reuse the same key.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": 31, \"severity\": \"non-blocking\", \"title\": \"Concurrent or repeated Pay requests can still double-charge, and a failed DB write loses the charge record\", \"explanation\": \"The invoice is selected with `status = 'open'` but isn't locked or claimed before charging. Two concurrent requests, for example a double click or a client retry after a long retry window, can both pass the check and both charge. Retries make the request longer, which widens this window. The charge is also recorded only after it succeeds. If the INSERT fails, the customer has been charged with no local record. Consider claiming the invoice first (`SELECT ... FOR UPDATE`, or a 'pending' payment row with a unique constraint on the invoice) and using the same idempotency key per invoice.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": 23, \"severity\": \"non-blocking\", \"title\": \"Worst-case latency is now about 30s plus backoff, and there is no test coverage\", \"explanation\": \"Each attempt can take up to 10s (provider timeout), and there are 3 attempts plus 200ms and 400ms of backoff, so the HTTP request can run for over 30s. That may exceed the load balancer or client timeout, and the client would then press Pay again anyway. Check the timeouts at those layers, or lower the attempt count or per-attempt timeout. The PR also adds no tests for the retry behavior, such as retry on a 502, no retry on a 4xx, and the same idempotency key across retries.\"}, {\"file\": \"src/routes/payments.ts\", \"line\": 12, \"severity\": \"nit\", \"title\": \"No error handling around the charge\", \"explanation\": \"If retries are exhausted, the `ProviderError` propagates from an async Express handler. Depending on the Express version and error middleware, this may become an unhandled rejection or a generic 500. Consider catching `ProviderError` and returning a clear 502/503 so clients can show a useful message. Also log the retry attempts so the provider failure rate stays visible.\"}]}\n```",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Retry payment provider calls on transient errors\n\nWe see a handful of provider timeouts and 502s a day, and customers have to press Pay again. This wraps the charge call in our existing `withRetry` helper, which already retries timeouts and 5xx responses with backoff.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/payments.ts b/src/routes/payments.ts\nindex 145304a..3f7c30c 100644\n--- a/src/routes/payments.ts\n+++ b/src/routes/payments.ts\n@@ -2,6 +2,7 @@ import { Router } from 'express'\n import { z } from 'zod'\n import { pool } from '../db.js'\n import { createCharge } from '../lib/provider.js'\n+import { withRetry } from '../lib/retry.js'\n import { logger } from '../lib/logger.js'\n \n export const paymentsRouter = Router()\n@@ -19,11 +20,13 @@ paymentsRouter.post('/', async (req, res) => {\n   const invoice = rows[0]\n   if (!invoice) return res.status(404).json({ error: 'invoice_not_payable' })\n \n-  const charge = await createCharge({\n-    amount: Number(invoice.amount),\n-    currency: invoice.currency,\n-    customerId: invoice.provider_customer_id,\n-  })\n+  const charge = await withRetry(() =>\n+    createCharge({\n+      amount: Number(invoice.amount),\n+      currency: invoice.currency,\n+      customerId: invoice.provider_customer_id,\n+    }),\n+  )\n \n   await pool.query(\n     `INSERT INTO payments (org_id, invoice_id, provider_charge_id, amount, status) VALUES ($1, $2, $3, $4, $5)`,\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

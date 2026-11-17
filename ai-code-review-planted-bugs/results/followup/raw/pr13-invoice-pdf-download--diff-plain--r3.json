@@ -1,0 +1,118 @@
+{
+  "pr": "pr13-invoice-pdf-download",
+  "condition": "diff-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:35:48.507Z",
+  "duration_ms": 27138,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.034809599999999996,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 660,
+    "cache_read_input_tokens": 1356,
+    "output_tokens": 3203,
+    "output_tokens_details": {
+      "thinking_tokens": 1497
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 660,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 3203,
+        "cache_read_input_tokens": 1356,
+        "cache_creation_input_tokens": 660,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 660
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 58,
+      "severity": "non-blocking",
+      "title": "`status` and `currency` are interpolated into HTML without escaping",
+      "explanation": "`org_name` is escaped, but `invoice.status` (line 58) and `invoice.currency` (line 57) are inserted raw. They are probably constrained values today, but nothing in this handler guarantees that. A schema change, an import, or a free-text currency or status would open a stored-XSS hole in a document served from the app origin. Escape every interpolated value, or use a small template function that escapes by default."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 52,
+      "severity": "non-blocking",
+      "title": "Amount formatting assumes every currency has 2 decimal places",
+      "explanation": "`Number(amount) / 100` with `toFixed(2)` is wrong for zero-decimal currencies such as JPY and three-decimal ones such as KWD. This is a financial document for accounting teams, so a wrong amount is costly. Reuse the formatting that `serializeInvoice` or the JSON route uses, or use `Intl.NumberFormat` with the currency's minor-unit exponent. Also check that `amount` is not a bigint or numeric string that loses precision when passed through `Number`."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 56,
+      "severity": "non-blocking",
+      "title": "Date handling may shift days and can throw on null",
+      "explanation": "If `period_start` and `period_end` are `date` columns, node-pg returns local-midnight `Date` objects, and `toISOString().slice(0, 10)` can show the previous day depending on the server timezone. If either column is nullable, this throws a TypeError and returns a 500. Format the dates in a timezone-safe way (for example, cast to text in SQL with `to_char`) and handle nulls."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 44,
+      "severity": "non-blocking",
+      "title": "Invalid `invoiceId` and unhandled async errors",
+      "explanation": "`Number('abc')` is `NaN`, and Postgres rejects it with an invalid-integer error, which becomes a 500 rather than a 404 or 400. The async handler also has no try/catch. Unless the app uses an async-error wrapper or Express 5, a DB failure becomes an unhandled rejection and the request hangs. Validate the id (`Number.isInteger` and > 0) and return 404 or 400. Make sure errors are forwarded to the error middleware the same way the other routes do it."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 53,
+      "severity": "non-blocking",
+      "title": "Missing cache and security headers on a sensitive HTML response",
+      "explanation": "This serves a financial document as HTML from the main origin. Add `Cache-Control: private, no-store` so shared proxies and browsers don't retain it. Consider `X-Content-Type-Options: nosniff` and a restrictive `Content-Security-Policy` (for example `default-src 'none'; style-src 'unsafe-inline'`) as defense in depth against the escaping gaps above."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 43,
+      "severity": "non-blocking",
+      "title": "No tests for the new endpoint",
+      "explanation": "Add tests covering: a successful render, a 404 for an invoice in another org (the tenant-isolation guarantee this PR relies on), a non-numeric id, HTML escaping of the org name (for example `<script>`), and non-2-decimal currencies. The cross-org case matters most."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 57,
+      "severity": "nit",
+      "title": "\"Amount due\" is misleading for paid or void invoices",
+      "explanation": "The label is always \"Amount due\", even when the status is paid, void, or draft. Use \"Amount\" or \"Total\", or vary the label by status, so the accounting copy isn't confusing."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 54,
+      "severity": "nit",
+      "title": "Minimal HTML document and no download behavior",
+      "explanation": "The markup has no `<html>`, `<head>`, `<meta charset>`, `<title>`, or print styles. The feature is described as a download, but the response renders inline with no `Content-Disposition` and a default filename. Add a proper document skeleton with a basic `@media print` style, and consider a `Content-Disposition` header with a name like `invoice-<id>.html` if a download is intended."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 61,
+      "severity": "nit",
+      "title": "Duplicated query and misplaced helper",
+      "explanation": "The org-scoped invoice lookup duplicates the one in the `/:invoiceId` route above it. Extract a shared `getInvoiceForOrg` function so the tenant filter lives in one place. `escapeHtml` is a generic utility and would be better in a shared module than at the bottom of a route file. The `as string` cast can be removed by typing the lookup map as `Record<string, string>`."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/invoices.ts\", \"line\": 58, \"severity\": \"non-blocking\", \"title\": \"`status` and `currency` are interpolated into HTML without escaping\", \"explanation\": \"`org_name` is escaped, but `invoice.status` (line 58) and `invoice.currency` (line 57) are inserted raw. They are probably constrained values today, but nothing in this handler guarantees that. A schema change, an import, or a free-text currency or status would open a stored-XSS hole in a document served from the app origin. Escape every interpolated value, or use a small template function that escapes by default.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 52, \"severity\": \"non-blocking\", \"title\": \"Amount formatting assumes every currency has 2 decimal places\", \"explanation\": \"`Number(amount) / 100` with `toFixed(2)` is wrong for zero-decimal currencies such as JPY and three-decimal ones such as KWD. This is a financial document for accounting teams, so a wrong amount is costly. Reuse the formatting that `serializeInvoice` or the JSON route uses, or use `Intl.NumberFormat` with the currency's minor-unit exponent. Also check that `amount` is not a bigint or numeric string that loses precision when passed through `Number`.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 56, \"severity\": \"non-blocking\", \"title\": \"Date handling may shift days and can throw on null\", \"explanation\": \"If `period_start` and `period_end` are `date` columns, node-pg returns local-midnight `Date` objects, and `toISOString().slice(0, 10)` can show the previous day depending on the server timezone. If either column is nullable, this throws a TypeError and returns a 500. Format the dates in a timezone-safe way (for example, cast to text in SQL with `to_char`) and handle nulls.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 44, \"severity\": \"non-blocking\", \"title\": \"Invalid `invoiceId` and unhandled async errors\", \"explanation\": \"`Number('abc')` is `NaN`, and Postgres rejects it with an invalid-integer error, which becomes a 500 rather than a 404 or 400. The async handler also has no try/catch. Unless the app uses an async-error wrapper or Express 5, a DB failure becomes an unhandled rejection and the request hangs. Validate the id (`Number.isInteger` and > 0) and return 404 or 400. Make sure errors are forwarded to the error middleware the same way the other routes do it.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 53, \"severity\": \"non-blocking\", \"title\": \"Missing cache and security headers on a sensitive HTML response\", \"explanation\": \"This serves a financial document as HTML from the main origin. Add `Cache-Control: private, no-store` so shared proxies and browsers don't retain it. Consider `X-Content-Type-Options: nosniff` and a restrictive `Content-Security-Policy` (for example `default-src 'none'; style-src 'unsafe-inline'`) as defense in depth against the escaping gaps above.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 43, \"severity\": \"non-blocking\", \"title\": \"No tests for the new endpoint\", \"explanation\": \"Add tests covering: a successful render, a 404 for an invoice in another org (the tenant-isolation guarantee this PR relies on), a non-numeric id, HTML escaping of the org name (for example `<script>`), and non-2-decimal currencies. The cross-org case matters most.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 57, \"severity\": \"nit\", \"title\": \"\\\"Amount due\\\" is misleading for paid or void invoices\", \"explanation\": \"The label is always \\\"Amount due\\\", even when the status is paid, void, or draft. Use \\\"Amount\\\" or \\\"Total\\\", or vary the label by status, so the accounting copy isn't confusing.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 54, \"severity\": \"nit\", \"title\": \"Minimal HTML document and no download behavior\", \"explanation\": \"The markup has no `<html>`, `<head>`, `<meta charset>`, `<title>`, or print styles. The feature is described as a download, but the response renders inline with no `Content-Disposition` and a default filename. Add a proper document skeleton with a basic `@media print` style, and consider a `Content-Disposition` header with a name like `invoice-<id>.html` if a download is intended.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 61, \"severity\": \"nit\", \"title\": \"Duplicated query and misplaced helper\", \"explanation\": \"The org-scoped invoice lookup duplicates the one in the `/:invoiceId` route above it. Extract a shared `getInvoiceForOrg` function so the tenant filter lives in one place. `escapeHtml` is a generic utility and would be better in a shared module than at the bottom of a route file. The `as string` cast can be removed by typing the lookup map as `Record<string, string>`.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add printable invoice download\n\nCustomers want a printable copy of an invoice for their accounting team. Adds `GET /invoices/:invoiceId/print`, which returns a simple HTML invoice. Scoped to the caller's organization like the other invoice routes.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex 938fffd..04598f2 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -39,3 +39,25 @@ invoicesRouter.get('/:invoiceId', async (req, res) => {\n   if (!rows[0]) return res.status(404).json({ error: 'not_found' })\n   res.json(serializeInvoice(rows[0]))\n })\n+\n+invoicesRouter.get('/:invoiceId/print', async (req, res) => {\n+  const { rows } = await pool.query(\n+    `SELECT i.id, i.amount, i.currency, i.status, i.period_start, i.period_end, o.name AS org_name\n+       FROM invoices i JOIN organizations o ON o.id = i.org_id\n+      WHERE i.id = $1 AND i.org_id = $2`,\n+    [Number(req.params.invoiceId), req.user.orgId],\n+  )\n+  const invoice = rows[0]\n+  if (!invoice) return res.status(404).json({ error: 'not_found' })\n+  const amount = (Number(invoice.amount) / 100).toFixed(2)\n+  res.type('html').send(`<!doctype html>\n+<h1>Invoice #${invoice.id}</h1>\n+<p>${escapeHtml(invoice.org_name)}</p>\n+<p>Period: ${invoice.period_start.toISOString().slice(0, 10)} to ${invoice.period_end.toISOString().slice(0, 10)}</p>\n+<p>Amount due: ${amount} ${invoice.currency.toUpperCase()}</p>\n+<p>Status: ${invoice.status}</p>`)\n+})\n+\n+function escapeHtml(value: string): string {\n+  return value.replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c] as string)\n+}\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

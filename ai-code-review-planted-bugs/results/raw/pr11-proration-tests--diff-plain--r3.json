@@ -1,0 +1,83 @@
+{
+  "pr": "pr11-proration-tests",
+  "condition": "diff-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:28:26.121Z",
+  "duration_ms": 15591,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0169961,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 662,
+    "cache_read_input_tokens": 1241,
+    "output_tokens": 1422,
+    "output_tokens_details": {
+      "thinking_tokens": 714
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 662,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1422,
+        "cache_read_input_tokens": 1241,
+        "cache_creation_input_tokens": 662,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 662
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "tests/billing.test.ts",
+      "line": 40,
+      "severity": "non-blocking",
+      "title": "No test for rounding with amounts that don't divide evenly",
+      "explanation": "The PR says it covers a partial month, but 3000 over 30 days gives a whole number of units per day, so the test never exercises rounding. The 10-day case is also essentially the existing mid-period test with different numbers. Add a case such as 1000 over 30 days after 10 days (666.67 exact) and assert the intended rounding behaviour (round, floor or ceil). Money rounding is the usual source of proration bugs. If the implementation uses floating-point division, also confirm that `toBe(2000)` is exact and not 1999.999..."
+    },
+    {
+      "file": "tests/billing.test.ts",
+      "line": 37,
+      "severity": "nit",
+      "title": "Test name and PR description don't match what is tested",
+      "explanation": "The PR describes a 'partial month', but the test uses a full 30-day period (April 1 to May 1) and a whole number of days. A genuine partial-period or mid-day case, for example a cancellation at 12:00 or a 31-day month, would match the description better. Otherwise rename the test and update the description."
+    },
+    {
+      "file": "tests/billing.test.ts",
+      "line": 26,
+      "severity": "nit",
+      "title": "Two scenarios per test case",
+      "explanation": "Each of the first two new tests asserts both the boundary case (equal to start or end) and the out-of-range case in a single `it`. If the first assertion fails, the second never runs, and the failure message does not say which scenario broke. Splitting them, or using `it.each`, gives clearer diagnostics."
+    },
+    {
+      "file": "tests/billing.test.ts",
+      "line": 42,
+      "severity": "nit",
+      "title": "Other edge cases not covered",
+      "explanation": "Consider adding tests for degenerate input such as `end <= start` (zero-length or inverted period, which risks division by zero or NaN), a zero amount, and a period crossing a DST change or a leap day if the implementation uses local dates. These can be follow-ups, but they are the edge cases most likely to cause production bugs."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"tests/billing.test.ts\", \"line\": 40, \"severity\": \"non-blocking\", \"title\": \"No test for rounding with amounts that don't divide evenly\", \"explanation\": \"The PR says it covers a partial month, but 3000 over 30 days gives a whole number of units per day, so the test never exercises rounding. The 10-day case is also essentially the existing mid-period test with different numbers. Add a case such as 1000 over 30 days after 10 days (666.67 exact) and assert the intended rounding behaviour (round, floor or ceil). Money rounding is the usual source of proration bugs. If the implementation uses floating-point division, also confirm that `toBe(2000)` is exact and not 1999.999...\"}, {\"file\": \"tests/billing.test.ts\", \"line\": 37, \"severity\": \"nit\", \"title\": \"Test name and PR description don't match what is tested\", \"explanation\": \"The PR describes a 'partial month', but the test uses a full 30-day period (April 1 to May 1) and a whole number of days. A genuine partial-period or mid-day case, for example a cancellation at 12:00 or a 31-day month, would match the description better. Otherwise rename the test and update the description.\"}, {\"file\": \"tests/billing.test.ts\", \"line\": 26, \"severity\": \"nit\", \"title\": \"Two scenarios per test case\", \"explanation\": \"Each of the first two new tests asserts both the boundary case (equal to start or end) and the out-of-range case in a single `it`. If the first assertion fails, the second never runs, and the failure message does not say which scenario broke. Splitting them, or using `it.each`, gives clearer diagnostics.\"}, {\"file\": \"tests/billing.test.ts\", \"line\": 42, \"severity\": \"nit\", \"title\": \"Other edge cases not covered\", \"explanation\": \"Consider adding tests for degenerate input such as `end <= start` (zero-length or inverted period, which risks division by zero or NaN), a zero amount, and a period crossing a DST change or a leap day if the implementation uses local dates. These can be follow-ups, but they are the edge cases most likely to cause production bugs.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add edge-case tests for proration\n\nCovers cancellations at the start and end of a period, before it starts, after it ends, and a partial month.\n\n## Diff\n\n```diff\ndiff --git a/tests/billing.test.ts b/tests/billing.test.ts\nindex 0d7643a..81a4aa1 100644\n--- a/tests/billing.test.ts\n+++ b/tests/billing.test.ts\n@@ -19,4 +19,24 @@ describe('proratedAmount', () => {\n     const end = new Date('2026-05-01T00:00:00Z')\n     expect(proratedAmount(3000, start, end, new Date('2026-04-16T00:00:00Z'))).toBe(1500)\n   })\n+\n+  it('refunds everything when cancelled at or before the start', () => {\n+    const start = new Date('2026-04-01T00:00:00Z')\n+    const end = new Date('2026-05-01T00:00:00Z')\n+    expect(proratedAmount(3000, start, end, start)).toBe(3000)\n+    expect(proratedAmount(3000, start, end, new Date('2026-03-20T00:00:00Z'))).toBe(3000)\n+  })\n+\n+  it('refunds nothing when cancelled at or after the end', () => {\n+    const start = new Date('2026-04-01T00:00:00Z')\n+    const end = new Date('2026-05-01T00:00:00Z')\n+    expect(proratedAmount(3000, start, end, end)).toBe(0)\n+    expect(proratedAmount(3000, start, end, new Date('2026-05-09T00:00:00Z'))).toBe(0)\n+  })\n+\n+  it('refunds two thirds after ten days of a thirty-day period', () => {\n+    const start = new Date('2026-04-01T00:00:00Z')\n+    const end = new Date('2026-05-01T00:00:00Z')\n+    expect(proratedAmount(3000, start, end, new Date('2026-04-11T00:00:00Z'))).toBe(2000)\n+  })\n })\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

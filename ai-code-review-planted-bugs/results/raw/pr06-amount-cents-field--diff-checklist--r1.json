@@ -1,0 +1,90 @@
+{
+  "pr": "pr06-amount-cents-field",
+  "condition": "diff-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:24:51.846Z",
+  "duration_ms": 13289,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.017877999999999998,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1611,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 1143,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 1611,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1143,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 1611,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1611
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Breaking API change: response field `amount` removed without a compatibility path",
+      "explanation": "Renaming the response key from `amount` to `amount_cents` immediately breaks every existing client (web app, mobile apps, partner integrations, webhooks consuming this serializer) that reads `amount`; they will get `undefined`, which can surface as NaN or blank totals in billing UIs. Mobile apps and third parties cannot be updated in lockstep with a deploy, and rolling deploys also mean old and new instances serve different shapes at the same time. Either emit both fields for a deprecation period (`amount` and `amount_cents`, with `amount` marked deprecated and removed later after confirming usage via logs/metrics), or ship it under a new API version. Also add a changelog entry/migration notes for API consumers."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Field name claims cents but the value is not verified to be in cents",
+      "explanation": "The value is still `Number(row.amount)` with no conversion. If the DB column `amount` stores decimal currency units (e.g. a NUMERIC(10,2) like 12.50, which `Number()` conversion hints at, since integer columns usually come back as numbers already), then `amount_cents` would be mislabeled and clients would be off by a factor of 100, which is worse than the original ambiguity for a billing field. Verify the column type and unit. If it is decimal major units, convert explicitly (e.g. `Math.round(Number(row.amount) * 100)`, or better, use a decimal-safe approach) and handle zero-decimal/three-decimal currencies by `currency`. If it is already integer cents, consider renaming the DB column/`InvoiceRow` field too so the unit is explicit throughout, and add a test asserting the unit."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "non-blocking",
+      "title": "`Number()` on a possibly string/bigint column can lose precision or yield NaN",
+      "explanation": "If the row value comes from a driver returning NUMERIC/BIGINT as a string, `Number()` silently yields NaN for malformed values and loses precision beyond 2^53. Money fields should be validated (e.g. `Number.isSafeInteger`) rather than blindly coerced, especially now that the name promises an integer."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": null,
+      "severity": "non-blocking",
+      "title": "No tests or documentation updates included",
+      "explanation": "The PR does not update serializer tests, OpenAPI/API docs, TypeScript response types, or other consumers in the repo (e.g. frontend, report exports, webhook payloads, snapshot tests). Search for all usages of `.amount` on invoice responses and update them, and add a test that locks in the new response shape and unit."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": null,
+      "severity": "nit",
+      "title": "Inconsistent naming between internal row and API field",
+      "explanation": "`InvoiceRow.amount` still uses the ambiguous name while the API field is `amount_cents`. Consider aligning naming (or adding a comment documenting the unit on `InvoiceRow`) so future readers do not repeat the dollars/cents confusion."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Breaking API change: response field `amount` removed without a compatibility path\", \"explanation\": \"Renaming the response key from `amount` to `amount_cents` immediately breaks every existing client (web app, mobile apps, partner integrations, webhooks consuming this serializer) that reads `amount`; they will get `undefined`, which can surface as NaN or blank totals in billing UIs. Mobile apps and third parties cannot be updated in lockstep with a deploy, and rolling deploys also mean old and new instances serve different shapes at the same time. Either emit both fields for a deprecation period (`amount` and `amount_cents`, with `amount` marked deprecated and removed later after confirming usage via logs/metrics), or ship it under a new API version. Also add a changelog entry/migration notes for API consumers.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Field name claims cents but the value is not verified to be in cents\", \"explanation\": \"The value is still `Number(row.amount)` with no conversion. If the DB column `amount` stores decimal currency units (e.g. a NUMERIC(10,2) like 12.50, which `Number()` conversion hints at, since integer columns usually come back as numbers already), then `amount_cents` would be mislabeled and clients would be off by a factor of 100, which is worse than the original ambiguity for a billing field. Verify the column type and unit. If it is decimal major units, convert explicitly (e.g. `Math.round(Number(row.amount) * 100)`, or better, use a decimal-safe approach) and handle zero-decimal/three-decimal currencies by `currency`. If it is already integer cents, consider renaming the DB column/`InvoiceRow` field too so the unit is explicit throughout, and add a test asserting the unit.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"non-blocking\", \"title\": \"`Number()` on a possibly string/bigint column can lose precision or yield NaN\", \"explanation\": \"If the row value comes from a driver returning NUMERIC/BIGINT as a string, `Number()` silently yields NaN for malformed values and loses precision beyond 2^53. Money fields should be validated (e.g. `Number.isSafeInteger`) rather than blindly coerced, especially now that the name promises an integer.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": null, \"severity\": \"non-blocking\", \"title\": \"No tests or documentation updates included\", \"explanation\": \"The PR does not update serializer tests, OpenAPI/API docs, TypeScript response types, or other consumers in the repo (e.g. frontend, report exports, webhook payloads, snapshot tests). Search for all usages of `.amount` on invoice responses and update them, and add a test that locks in the new response shape and unit.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": null, \"severity\": \"nit\", \"title\": \"Inconsistent naming between internal row and API field\", \"explanation\": \"`InvoiceRow.amount` still uses the ambiguous name while the API field is `amount_cents`. Consider aligning naming (or adding a comment documenting the unit on `InvoiceRow`) so future readers do not repeat the dollars/cents confusion.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Rename invoice amount to amount_cents\n\n`amount` is ambiguous: people reading the API assume dollars. This renames the response field to `amount_cents` so the unit is explicit.\n\n## Diff\n\n```diff\ndiff --git a/src/serializers/invoice.ts b/src/serializers/invoice.ts\nindex 653d75e..9e281b3 100644\n--- a/src/serializers/invoice.ts\n+++ b/src/serializers/invoice.ts\n@@ -11,7 +11,7 @@ export interface InvoiceRow {\n export function serializeInvoice(row: InvoiceRow) {\n   return {\n     id: row.id,\n-    amount: Number(row.amount),\n+    amount_cents: Number(row.amount),\n     currency: row.currency,\n     status: row.status,\n     period_start: row.period_start.toISOString(),\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

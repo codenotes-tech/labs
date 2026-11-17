@@ -1,0 +1,22 @@
+{
+  "registered_at": "2026-11-17T17:33:49.774Z",
+  "note": "Follow-up set, designed after the main run caught all nine planted bugs from the diff alone: three PRs that are wrong only because of rules stated in this repository. Fingerprints recorded before any follow-up review was run.",
+  "sha256": {
+    "followup/prs/answer-key.json": "12bb517b130799ea09f46fe0eb5d38b5e02eac43b32e03a12fa799311f081cef",
+    "followup/prs/definitions.mjs": "f0726aa97b29815caa3e8f6d002d62229f3e12b667f97207dc8fc2dceeec2f29",
+    "score.mjs": "39cdfe2143cd7e801361e7d8cbf7db77ca9c072a1c7a70308ea6e241b9c08927",
+    "prompts/system.txt": "97933770793cffc2aca4f63340591b539bcc2fd467fdca1261a99359bed55418",
+    "prompts/review.txt": "7bf329ba8c53c104da82f54083ad284341a7b594df1794845ca5dc578f31a81a",
+    "prompts/repo-note.txt": "b5ab68c73828f51e0b1ad301b538f99ec1c27b6968c8bb461b477155d104132c",
+    "prompts/checklist.txt": "b807f4702a5c67166140324ea91bcbf96b300d31db162dc4b18400f092563cb2"
+  },
+  "changes_after_registration": [
+    {
+      "at": "2026-11-17T17:39:11.050Z",
+      "file": "score.mjs",
+      "sha256": "10bd058620ae4dec475155cbd7adb99b50094a7107d11cc096c43224b02864bc",
+      "change": "Display only: the summary header names the actual raw folder, and file paths in scored.csv are shown relative to the checkout (macOS reported them under /private/var).",
+      "reason": "Readability of the published outputs. Matching rules and all scores are unchanged."
+    }
+  ]
+}

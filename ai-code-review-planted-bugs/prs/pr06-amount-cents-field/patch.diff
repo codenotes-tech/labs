@@ -1,0 +1,13 @@
+diff --git a/src/serializers/invoice.ts b/src/serializers/invoice.ts
+index 653d75e..9e281b3 100644
+--- a/src/serializers/invoice.ts
++++ b/src/serializers/invoice.ts
+@@ -11,7 +11,7 @@ export interface InvoiceRow {
+ export function serializeInvoice(row: InvoiceRow) {
+   return {
+     id: row.id,
+-    amount: Number(row.amount),
++    amount_cents: Number(row.amount),
+     currency: row.currency,
+     status: row.status,
+     period_start: row.period_start.toISOString(),

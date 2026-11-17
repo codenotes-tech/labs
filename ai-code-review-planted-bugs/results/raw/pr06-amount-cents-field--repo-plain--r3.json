@@ -1,0 +1,124 @@
+{
+  "pr": "pr06-amount-cents-field",
+  "condition": "repo-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:26:37.866Z",
+  "duration_ms": 16893,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.023947899999999998,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 2112,
+    "cache_read_input_tokens": 13079,
+    "output_tokens": 1418,
+    "output_tokens_details": {
+      "thinking_tokens": 29
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2112,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 957,
+        "cache_read_input_tokens": 5364,
+        "cache_creation_input_tokens": 280,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 280
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-GFLftS/src/serializers/invoice.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "amount",
+        "output_mode": "content",
+        "-n": true,
+        "head_limit": 100
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "\\.amount\\b|amount:",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-GFLftS",
+        "glob": "{web,docs,test,tests,openapi}*/**",
+        "output_mode": "content"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-GFLftS/src/serializers/invoice.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "web/src/components/InvoiceRow.tsx",
+      "line": 10,
+      "severity": "blocking",
+      "title": "Frontend still reads `invoice.amount`, which the API no longer returns",
+      "explanation": "The serializer now returns `amount_cents` and no longer returns `amount`. The web client still uses `invoice.amount / 100`. That evaluates to `undefined / 100`, which is `NaN`, so every invoice would show a broken amount. Update `web/src/api/invoices.ts` (the type) and `InvoiceRow.tsx` to use `amount_cents`. Alternatively, ship the backend and frontend changes together."
+    },
+    {
+      "file": "web/src/api/invoices.ts",
+      "line": 4,
+      "severity": "blocking",
+      "title": "Client-side Invoice type not updated",
+      "explanation": "The type still declares `amount: number // cents`. TypeScript can't catch the mismatch with the new response shape, so the break goes unnoticed at compile time. Rename the field to `amount_cents` so the compiler flags every remaining usage."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Breaking API change with no compatibility or versioning plan",
+      "explanation": "Renaming a response field breaks any external or older API consumers, such as mobile apps, integrations and cached clients. Either return both `amount` and `amount_cents` for a deprecation period, or version the API. If the API is strictly internal, say so in the PR and deploy the backend and frontend together. Check the routes in `src/routes/invoices.ts` for other consumers."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "non-blocking",
+      "title": "Naming is now inconsistent between the DB, the row type and the API",
+      "explanation": "The DB column and `InvoiceRow.amount` are still called `amount`, while the API says `amount_cents`. That is acceptable at an API boundary. Still, consider renaming the column or the row field, or add a comment, so readers don't repeat the dollar-versus-cents confusion internally. The `payments` table and `createCharge({amount})` have the same ambiguity."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "nit",
+      "title": "`Number()` on a BIGINT string can lose precision",
+      "explanation": "This was already the case before the PR. Values above 2^53 cents lose precision, which is unlikely for invoice amounts. A short comment or a range check would document the assumption."
+    },
+    {
+      "file": null,
+      "line": null,
+      "severity": "non-blocking",
+      "title": "No tests or API docs updated",
+      "explanation": "There is no test covering the serializer's output shape, and no changelog or OpenAPI/docs update for the renamed field. Add a serializer test asserting `amount_cents`, and document the change."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"web/src/components/InvoiceRow.tsx\", \"line\": 10, \"severity\": \"blocking\", \"title\": \"Frontend still reads `invoice.amount`, which the API no longer returns\", \"explanation\": \"The serializer now returns `amount_cents` and no longer returns `amount`. The web client still uses `invoice.amount / 100`. That evaluates to `undefined / 100`, which is `NaN`, so every invoice would show a broken amount. Update `web/src/api/invoices.ts` (the type) and `InvoiceRow.tsx` to use `amount_cents`. Alternatively, ship the backend and frontend changes together.\"}, {\"file\": \"web/src/api/invoices.ts\", \"line\": 4, \"severity\": \"blocking\", \"title\": \"Client-side Invoice type not updated\", \"explanation\": \"The type still declares `amount: number // cents`. TypeScript can't catch the mismatch with the new response shape, so the break goes unnoticed at compile time. Rename the field to `amount_cents` so the compiler flags every remaining usage.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Breaking API change with no compatibility or versioning plan\", \"explanation\": \"Renaming a response field breaks any external or older API consumers, such as mobile apps, integrations and cached clients. Either return both `amount` and `amount_cents` for a deprecation period, or version the API. If the API is strictly internal, say so in the PR and deploy the backend and frontend together. Check the routes in `src/routes/invoices.ts` for other consumers.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"non-blocking\", \"title\": \"Naming is now inconsistent between the DB, the row type and the API\", \"explanation\": \"The DB column and `InvoiceRow.amount` are still called `amount`, while the API says `amount_cents`. That is acceptable at an API boundary. Still, consider renaming the column or the row field, or add a comment, so readers don't repeat the dollar-versus-cents confusion internally. The `payments` table and `createCharge({amount})` have the same ambiguity.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"nit\", \"title\": \"`Number()` on a BIGINT string can lose precision\", \"explanation\": \"This was already the case before the PR. Values above 2^53 cents lose precision, which is unlikely for invoice amounts. A short comment or a range check would document the assumption.\"}, {\"file\": null, \"line\": null, \"severity\": \"non-blocking\", \"title\": \"No tests or API docs updated\", \"explanation\": \"There is no test covering the serializer's output shape, and no changelog or OpenAPI/docs update for the renamed field. Add a serializer test asserting `amount_cents`, and document the change.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Rename invoice amount to amount_cents\n\n`amount` is ambiguous: people reading the API assume dollars. This renames the response field to `amount_cents` so the unit is explicit.\n\n## Diff\n\n```diff\ndiff --git a/src/serializers/invoice.ts b/src/serializers/invoice.ts\nindex 653d75e..9e281b3 100644\n--- a/src/serializers/invoice.ts\n+++ b/src/serializers/invoice.ts\n@@ -11,7 +11,7 @@ export interface InvoiceRow {\n export function serializeInvoice(row: InvoiceRow) {\n   return {\n     id: row.id,\n-    amount: Number(row.amount),\n+    amount_cents: Number(row.amount),\n     currency: row.currency,\n     status: row.status,\n     period_start: row.period_start.toISOString(),\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

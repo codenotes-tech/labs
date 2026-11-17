@@ -1,0 +1,69 @@
+{
+  "pr": "pr10-shared-money-format",
+  "condition": "diff-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:24:34.044Z",
+  "duration_ms": 8033,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.006768199999999999,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 665,
+    "cache_read_input_tokens": 1242,
+    "output_tokens": 398,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 665,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 398,
+        "cache_read_input_tokens": 1242,
+        "cache_creation_input_tokens": 665,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 665
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "web/src/format.ts",
+      "line": 3,
+      "severity": "nit",
+      "title": "Formatter hardcodes USD and en-US, and the name hides that",
+      "explanation": "The move is behavior-preserving, but the helper is now meant for reuse by other components. `formatCents` implies a generic money formatter while it always renders USD with en-US locale. If any other component or invoice can carry a different currency, it will silently display the wrong symbol. Consider renaming to `formatUsdCents`, or accepting an optional `currency` argument (defaulting to 'USD') if the Invoice type has or will gain a currency field. Not blocking since current behavior is unchanged."
+    },
+    {
+      "file": "web/src/format.ts",
+      "line": 3,
+      "severity": "nit",
+      "title": "No unit tests for the newly shared helper",
+      "explanation": "Once the function is shared, regressions affect multiple components. A small test file covering typical values, 0, negative amounts (refunds/credits), and rounding of cents such as 1, 99, and 100 would be cheap and would lock in the 'cents in, formatted string out' contract. Non-integer input is also worth documenting: the function assumes integer cents."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"web/src/format.ts\", \"line\": 3, \"severity\": \"nit\", \"title\": \"Formatter hardcodes USD and en-US, and the name hides that\", \"explanation\": \"The move is behavior-preserving, but the helper is now meant for reuse by other components. `formatCents` implies a generic money formatter while it always renders USD with en-US locale. If any other component or invoice can carry a different currency, it will silently display the wrong symbol. Consider renaming to `formatUsdCents`, or accepting an optional `currency` argument (defaulting to 'USD') if the Invoice type has or will gain a currency field. Not blocking since current behavior is unchanged.\"}, {\"file\": \"web/src/format.ts\", \"line\": 3, \"severity\": \"nit\", \"title\": \"No unit tests for the newly shared helper\", \"explanation\": \"Once the function is shared, regressions affect multiple components. A small test file covering typical values, 0, negative amounts (refunds/credits), and rounding of cents such as 1, 99, and 100 would be cheap and would lock in the 'cents in, formatted string out' contract. Non-integer input is also worth documenting: the function assumes integer cents.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Share money formatting in the web app\n\nMoves the currency formatter used by `InvoiceRow` into `web/src/format.ts` so other components can reuse it. No behavior change.\n\n## Diff\n\n```diff\ndiff --git a/web/src/components/InvoiceRow.tsx b/web/src/components/InvoiceRow.tsx\nindex 8a1663a..b752821 100644\n--- a/web/src/components/InvoiceRow.tsx\n+++ b/web/src/components/InvoiceRow.tsx\n@@ -1,13 +1,12 @@\n import type { Invoice } from '../api/invoices'\n-\n-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })\n+import { formatCents } from '../format'\n \n export function InvoiceRow({ invoice }: { invoice: Invoice }) {\n   return (\n     <tr>\n       <td>#{invoice.id}</td>\n       <td>{new Date(invoice.period_start).toLocaleDateString()}</td>\n-      <td>{money.format(invoice.amount / 100)}</td>\n+      <td>{formatCents(invoice.amount)}</td>\n       <td>{invoice.status}</td>\n     </tr>\n   )\ndiff --git a/web/src/format.ts b/web/src/format.ts\nnew file mode 100644\nindex 0000000..42bf241\n--- /dev/null\n+++ b/web/src/format.ts\n@@ -0,0 +1,5 @@\n+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })\n+\n+export function formatCents(cents: number): string {\n+  return usd.format(cents / 100)\n+}\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

@@ -1,0 +1,20 @@
+diff --git a/README.md b/README.md
+index c454bb1..9513c3f 100644
+--- a/README.md
++++ b/README.md
+@@ -9,6 +9,15 @@ Billing API for Acme's project management product: organizations, projects, invo
+ 
+ Deploys are rolling: old and new versions of the API serve traffic together during a release.
+ 
++## Configuration
++
++| Variable | Required | Default | Used by |
++| --- | --- | --- | --- |
++| `DATABASE_URL` | yes | none | `src/db.ts` |
++| `PORT` | no | `3000` | `src/server.ts` |
++| `PAYMENT_PROVIDER_URL` | no | `https://api.payments.example` | `src/lib/provider.ts` |
++| `PAYMENT_PROVIDER_KEY` | yes | none | `src/lib/provider.ts` |
++
+ ## Running locally
+ 
+ ```bash

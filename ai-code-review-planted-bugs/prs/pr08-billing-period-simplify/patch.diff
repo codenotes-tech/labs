@@ -1,0 +1,19 @@
+diff --git a/src/services/billing.ts b/src/services/billing.ts
+index 81ad02d..eb1824d 100644
+--- a/src/services/billing.ts
++++ b/src/services/billing.ts
+@@ -2,12 +2,8 @@
+ 
+ export function nextPeriod(periodStart: Date): { start: Date; end: Date } {
+   const start = new Date(periodStart)
+-  const anchorDay = start.getUTCDate()
+-  const year = start.getUTCFullYear()
+-  const month = start.getUTCMonth() + 1
+-  // Clamp to the last day of the next month, so a period starting on Jan 31 renews on Feb 28/29.
+-  const lastDayOfNextMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
+-  const end = new Date(Date.UTC(year, month, Math.min(anchorDay, lastDayOfNextMonth)))
++  const end = new Date(periodStart)
++  end.setUTCMonth(end.getUTCMonth() + 1)
+   return { start, end }
+ }
+ 

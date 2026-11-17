@@ -1,0 +1,29 @@
+diff --git a/tests/billing.test.ts b/tests/billing.test.ts
+index 0d7643a..81a4aa1 100644
+--- a/tests/billing.test.ts
++++ b/tests/billing.test.ts
+@@ -19,4 +19,24 @@ describe('proratedAmount', () => {
+     const end = new Date('2026-05-01T00:00:00Z')
+     expect(proratedAmount(3000, start, end, new Date('2026-04-16T00:00:00Z'))).toBe(1500)
+   })
++
++  it('refunds everything when cancelled at or before the start', () => {
++    const start = new Date('2026-04-01T00:00:00Z')
++    const end = new Date('2026-05-01T00:00:00Z')
++    expect(proratedAmount(3000, start, end, start)).toBe(3000)
++    expect(proratedAmount(3000, start, end, new Date('2026-03-20T00:00:00Z'))).toBe(3000)
++  })
++
++  it('refunds nothing when cancelled at or after the end', () => {
++    const start = new Date('2026-04-01T00:00:00Z')
++    const end = new Date('2026-05-01T00:00:00Z')
++    expect(proratedAmount(3000, start, end, end)).toBe(0)
++    expect(proratedAmount(3000, start, end, new Date('2026-05-09T00:00:00Z'))).toBe(0)
++  })
++
++  it('refunds two thirds after ten days of a thirty-day period', () => {
++    const start = new Date('2026-04-01T00:00:00Z')
++    const end = new Date('2026-05-01T00:00:00Z')
++    expect(proratedAmount(3000, start, end, new Date('2026-04-11T00:00:00Z'))).toBe(2000)
++  })
+ })

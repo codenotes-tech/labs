@@ -1,0 +1,106 @@
+{
+  "pr": "pr14-annual-plan-pricing",
+  "condition": "repo-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:35:12.097Z",
+  "duration_ms": 16289,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.0240055,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 2881,
+    "cache_read_input_tokens": 12395,
+    "output_tokens": 1123,
+    "output_tokens_details": {
+      "thinking_tokens": 23
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2881,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 802,
+        "cache_read_input_tokens": 5220,
+        "cache_creation_input_tokens": 439,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 439
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-0XCzoO/src/services/pricing.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "annualPriceMinor|monthlyPriceMinor",
+        "output_mode": "content"
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-0XCzoO/src/lib/money.ts"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-0XCzoO/src/services/pricing.ts",
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-0XCzoO/src/lib/money.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/services/pricing.ts",
+      "line": 23,
+      "severity": "blocking",
+      "title": "Hardcoded `* 100` overcharges JPY and KRW by 100x",
+      "explanation": "`src/lib/money.ts` says to always convert with the helpers and never multiply or divide by 100. JPY and KRW have no minor unit, and both are in `PLANS`. For example, team JPY at 1 seat gives 1800*12*0.9*100 = 1,944,000 here. The correct amount is 19,440. Invoices and checkout would overcharge by 100x. Compute the major-unit annual amount, then call `toMinorUnits(annualMajor, currency)`, as `monthlyPriceMinor` does."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 23,
+      "severity": "non-blocking",
+      "title": "Floating-point discount math and rounding",
+      "explanation": "`monthly * 12 * 0.9 * 100` is binary floating-point arithmetic, so results like x.4999999 can round the wrong way. Prefer integer minor-unit math, for example `Math.round(monthlyMinor * 12 * 9 / 10)` using `monthlyPriceMinor`. This also reuses the monthly logic, so the two prices cannot drift apart. Decide and document the rounding rule, because it determines what the customer is charged."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 21,
+      "severity": "non-blocking",
+      "title": "No input validation and no tests",
+      "explanation": "`seats` is not checked, so zero, negative, fractional or NaN values produce nonsense amounts in a billing path. The PR adds no tests. Add tests per currency (usd, eur, jpy, krw) with known expected values. The JPY and KRW cases would have caught the bug above. Add boundary cases for seats too."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 20,
+      "severity": "nit",
+      "title": "Magic numbers and PR description mismatch",
+      "explanation": "The 12 and 0.9 are inline literals. Extract named constants such as `ANNUAL_MONTHS = 12` and `ANNUAL_DISCOUNT`, so checkout and invoice code can share them. The PR says checkout and the invoice generator both use this function, but no callers are included in the diff. Confirm they will call this function and not recompute the price themselves."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/services/pricing.ts\", \"line\": 23, \"severity\": \"blocking\", \"title\": \"Hardcoded `* 100` overcharges JPY and KRW by 100x\", \"explanation\": \"`src/lib/money.ts` says to always convert with the helpers and never multiply or divide by 100. JPY and KRW have no minor unit, and both are in `PLANS`. For example, team JPY at 1 seat gives 1800*12*0.9*100 = 1,944,000 here. The correct amount is 19,440. Invoices and checkout would overcharge by 100x. Compute the major-unit annual amount, then call `toMinorUnits(annualMajor, currency)`, as `monthlyPriceMinor` does.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 23, \"severity\": \"non-blocking\", \"title\": \"Floating-point discount math and rounding\", \"explanation\": \"`monthly * 12 * 0.9 * 100` is binary floating-point arithmetic, so results like x.4999999 can round the wrong way. Prefer integer minor-unit math, for example `Math.round(monthlyMinor * 12 * 9 / 10)` using `monthlyPriceMinor`. This also reuses the monthly logic, so the two prices cannot drift apart. Decide and document the rounding rule, because it determines what the customer is charged.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 21, \"severity\": \"non-blocking\", \"title\": \"No input validation and no tests\", \"explanation\": \"`seats` is not checked, so zero, negative, fractional or NaN values produce nonsense amounts in a billing path. The PR adds no tests. Add tests per currency (usd, eur, jpy, krw) with known expected values. The JPY and KRW cases would have caught the bug above. Add boundary cases for seats too.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 20, \"severity\": \"nit\", \"title\": \"Magic numbers and PR description mismatch\", \"explanation\": \"The 12 and 0.9 are inline literals. Extract named constants such as `ANNUAL_MONTHS = 12` and `ANNUAL_DISCOUNT`, so checkout and invoice code can share them. The PR says checkout and the invoice generator both use this function, but no callers are included in the diff. Confirm they will call this function and not recompute the price themselves.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add annual plan pricing\n\nAnnual billing launches next month: twelve months for the price of 10.8 (a 10% discount). Adds `annualPriceMinor` next to the monthly price so the checkout page and the invoice generator compute it the same way.\n\n## Diff\n\n```diff\ndiff --git a/src/services/pricing.ts b/src/services/pricing.ts\nindex 142a18d..f738804 100644\n--- a/src/services/pricing.ts\n+++ b/src/services/pricing.ts\n@@ -16,3 +16,9 @@ export function monthlyPriceMinor(plan: Plan, currency: Currency, seats: number)\n export function planLabel(plan: Plan): string {\n   return plan === 'team' ? 'Team' : 'Business'\n }\n+\n+// Annual billing: twelve months with a 10% discount, in minor units for the invoice.\n+export function annualPriceMinor(plan: Plan, currency: Currency, seats: number): number {\n+  const monthly = PLANS[plan].monthly[currency] * seats\n+  return Math.round(monthly * 12 * 0.9 * 100)\n+}\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

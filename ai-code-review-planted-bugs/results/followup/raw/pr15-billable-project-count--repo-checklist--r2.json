@@ -1,0 +1,93 @@
+{
+  "pr": "pr15-billable-project-count",
+  "condition": "repo-checklist",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:35:24.268Z",
+  "duration_ms": 11583,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 3,
+  "cost_usd": 0.0197753,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 2712,
+    "cache_read_input_tokens": 7993,
+    "output_tokens": 812,
+    "output_tokens_details": {
+      "thinking_tokens": 28
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2712,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 570,
+        "cache_read_input_tokens": 4324,
+        "cache_creation_input_tokens": 2057,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 2057
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-miZp58/src/services/usage.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "archived|deleted_at|status",
+        "glob": "**/*.{ts,sql}",
+        "output_mode": "content"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-miZp58/src/services/usage.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/services/usage.ts",
+      "line": 19,
+      "severity": "blocking",
+      "title": "Billable count includes archived projects, so customers are overcharged",
+      "explanation": "The query counts every project row for the org and has no `archived_at IS NULL` filter. Archiving is a soft delete: `src/routes/projects.ts:49` sets `archived_at`, and `activeProjectNames` in the same file excludes archived rows. Under per-project pricing, an org would be billed for every project it ever archived. The count would also disagree with the project list shown in the UI. Add `AND archived_at IS NULL`, unless product explicitly decides archived projects are billable. If they are, document that decision in a comment and a test. Ideally, share one 'active project' predicate with `activeProjectNames` so the two cannot drift."
+    },
+    {
+      "file": "src/services/usage.ts",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "No tests for the new billing function",
+      "explanation": "This number feeds invoices directly. Add tests covering an org with no projects, an org with archived projects, and an org that has projects alongside other orgs' projects (tenant isolation). A test with archived projects would have caught the issue above."
+    },
+    {
+      "file": "src/services/usage.ts",
+      "line": 18,
+      "severity": "nit",
+      "title": "Count is a point-in-time value with no billing-period semantics",
+      "explanation": "The function returns the current count. Per-project pricing may need the count as of the period end, or a peak or prorated value. A project created and archived mid-period would otherwise be missed or double-counted. Confirm with the invoice generator that a live snapshot is the intended behavior, and consider accepting an `asOf` or period parameter."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/services/usage.ts\", \"line\": 19, \"severity\": \"blocking\", \"title\": \"Billable count includes archived projects, so customers are overcharged\", \"explanation\": \"The query counts every project row for the org and has no `archived_at IS NULL` filter. Archiving is a soft delete: `src/routes/projects.ts:49` sets `archived_at`, and `activeProjectNames` in the same file excludes archived rows. Under per-project pricing, an org would be billed for every project it ever archived. The count would also disagree with the project list shown in the UI. Add `AND archived_at IS NULL`, unless product explicitly decides archived projects are billable. If they are, document that decision in a comment and a test. Ideally, share one 'active project' predicate with `activeProjectNames` so the two cannot drift.\"}, {\"file\": \"src/services/usage.ts\", \"line\": 18, \"severity\": \"non-blocking\", \"title\": \"No tests for the new billing function\", \"explanation\": \"This number feeds invoices directly. Add tests covering an org with no projects, an org with archived projects, and an org that has projects alongside other orgs' projects (tenant isolation). A test with archived projects would have caught the issue above.\"}, {\"file\": \"src/services/usage.ts\", \"line\": 18, \"severity\": \"nit\", \"title\": \"Count is a point-in-time value with no billing-period semantics\", \"explanation\": \"The function returns the current count. Per-project pricing may need the count as of the period end, or a peak or prorated value. A project created and archived mid-period would otherwise be missed or double-counted. Confirm with the invoice generator that a live snapshot is the intended behavior, and consider accepting an `asOf` or period parameter.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Count billable projects for per-project pricing\n\nThe Business plan moves to per-project pricing next month. Adds `billableProjectCount`, which the invoice generator will use to price each organization.\n\n## Diff\n\n```diff\ndiff --git a/src/services/usage.ts b/src/services/usage.ts\nindex 1d52088..3ab979d 100644\n--- a/src/services/usage.ts\n+++ b/src/services/usage.ts\n@@ -13,3 +13,9 @@ export async function activeProjectNames(orgId: number): Promise<string[]> {\n   )\n   return rows.map((r) => r.name)\n }\n+\n+// Business plan: one billable unit per project.\n+export async function billableProjectCount(orgId: number): Promise<number> {\n+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM projects WHERE org_id = $1', [orgId])\n+  return rows[0].n\n+}\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

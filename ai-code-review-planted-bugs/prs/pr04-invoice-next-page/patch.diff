@@ -1,0 +1,21 @@
+diff --git a/src/routes/invoices.ts b/src/routes/invoices.ts
+index b9edb19..8e99e4e 100644
+--- a/src/routes/invoices.ts
++++ b/src/routes/invoices.ts
+@@ -19,11 +19,13 @@ invoicesRouter.get('/', async (req, res) => {
+       WHERE org_id = $1 AND ($2::bigint IS NULL OR id < $2)
+       ORDER BY id DESC
+       LIMIT $3`,
+-    [req.user.orgId, before ?? null, limit],
++    [req.user.orgId, before ?? null, limit + 1],
+   )
++  const hasMore = rows.length > limit
++  const page = rows.slice(1, limit + 1)
+   res.json({
+-    invoices: rows.map(serializeInvoice),
+-    next_before: rows.length === limit ? rows[rows.length - 1].id : null,
++    invoices: page.map(serializeInvoice),
++    next_before: hasMore ? page[page.length - 1].id : null,
+   })
+ })
+ 

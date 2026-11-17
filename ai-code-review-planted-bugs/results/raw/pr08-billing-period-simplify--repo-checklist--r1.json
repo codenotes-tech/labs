@@ -1,0 +1,76 @@
+{
+  "pr": "pr08-billing-period-simplify",
+  "condition": "repo-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:30:45.219Z",
+  "duration_ms": 10677,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0111234,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 660,
+    "cache_read_input_tokens": 3794,
+    "output_tokens": 810,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 660,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 810,
+        "cache_read_input_tokens": 3794,
+        "cache_creation_input_tokens": 660,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 660
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/services/billing.ts",
+      "line": 6,
+      "severity": "blocking",
+      "title": "setUTCMonth overflows on month-end anchors, skipping a month",
+      "explanation": "The removed code explicitly clamped to the last day of the next month (its comment says Jan 31 renews on Feb 28/29). `setUTCMonth(getUTCMonth() + 1)` keeps the day-of-month, so Jan 31 becomes 'Feb 31', which rolls over to Mar 3 (or Mar 2 in leap years). Likewise Mar 31 -> May 1, May 31 -> Jul 1, Aug 31 -> Oct 1, and Oct 31 -> Dec 1. Customers anchored on the 29th, 30th or 31st would be billed late or get a period of the wrong length, and the drift compounds if the next period start is derived from this end. The PR description claims the rollover is handled, but that only covers year rollover, not day overflow. Fix: restore the clamp, e.g. compute the last day of the target month with `Date.UTC(y, m + 2, 0)` and use `Math.min(anchorDay, lastDay)`, or set the date to 1 before changing the month and then set the day to the clamped value. Keep the time-of-day components if they matter."
+    },
+    {
+      "file": "src/services/billing.ts",
+      "line": 6,
+      "severity": "blocking",
+      "title": "Behavior change is unguarded by tests",
+      "explanation": "The clamping logic was deliberate and evidently covered a known edge case, yet this refactor removes it without adding or updating tests. Add test cases for Jan 31 (leap and non-leap), Mar 31, Dec 31 -> Jan, Jan 30 and Jan 29 in non-leap years, so a regression like this is caught."
+    },
+    {
+      "file": "src/services/billing.ts",
+      "line": 6,
+      "severity": "non-blocking",
+      "title": "Time-of-day is now preserved, unlike before",
+      "explanation": "The old code built `end` with `Date.UTC(year, month, day)`, which zeroes the time, while the new code copies the full timestamp from `periodStart`. If `periodStart` has a non-midnight time, `end` now carries that time-of-day, which changes the boundary semantics (e.g. invoice cut-off and equality comparisons with date-only values). Confirm which is intended and make it explicit, either by keeping the time or by zeroing it."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/services/billing.ts\", \"line\": 6, \"severity\": \"blocking\", \"title\": \"setUTCMonth overflows on month-end anchors, skipping a month\", \"explanation\": \"The removed code explicitly clamped to the last day of the next month (its comment says Jan 31 renews on Feb 28/29). `setUTCMonth(getUTCMonth() + 1)` keeps the day-of-month, so Jan 31 becomes 'Feb 31', which rolls over to Mar 3 (or Mar 2 in leap years). Likewise Mar 31 -> May 1, May 31 -> Jul 1, Aug 31 -> Oct 1, and Oct 31 -> Dec 1. Customers anchored on the 29th, 30th or 31st would be billed late or get a period of the wrong length, and the drift compounds if the next period start is derived from this end. The PR description claims the rollover is handled, but that only covers year rollover, not day overflow. Fix: restore the clamp, e.g. compute the last day of the target month with `Date.UTC(y, m + 2, 0)` and use `Math.min(anchorDay, lastDay)`, or set the date to 1 before changing the month and then set the day to the clamped value. Keep the time-of-day components if they matter.\"}, {\"file\": \"src/services/billing.ts\", \"line\": 6, \"severity\": \"blocking\", \"title\": \"Behavior change is unguarded by tests\", \"explanation\": \"The clamping logic was deliberate and evidently covered a known edge case, yet this refactor removes it without adding or updating tests. Add test cases for Jan 31 (leap and non-leap), Mar 31, Dec 31 -> Jan, Jan 30 and Jan 29 in non-leap years, so a regression like this is caught.\"}, {\"file\": \"src/services/billing.ts\", \"line\": 6, \"severity\": \"non-blocking\", \"title\": \"Time-of-day is now preserved, unlike before\", \"explanation\": \"The old code built `end` with `Date.UTC(year, month, day)`, which zeroes the time, while the new code copies the full timestamp from `periodStart`. If `periodStart` has a non-midnight time, `end` now carries that time-of-day, which changes the boundary semantics (e.g. invoice cut-off and equality comparisons with date-only values). Confirm which is intended and make it explicit, either by keeping the time or by zeroing it.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Simplify next billing period calculation\n\nReplaces the manual date math in `nextPeriod` with `setUTCMonth`, which already handles month and year rollover.\n\n## Diff\n\n```diff\ndiff --git a/src/services/billing.ts b/src/services/billing.ts\nindex 81ad02d..eb1824d 100644\n--- a/src/services/billing.ts\n+++ b/src/services/billing.ts\n@@ -2,12 +2,8 @@\n \n export function nextPeriod(periodStart: Date): { start: Date; end: Date } {\n   const start = new Date(periodStart)\n-  const anchorDay = start.getUTCDate()\n-  const year = start.getUTCFullYear()\n-  const month = start.getUTCMonth() + 1\n-  // Clamp to the last day of the next month, so a period starting on Jan 31 renews on Feb 28/29.\n-  const lastDayOfNextMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()\n-  const end = new Date(Date.UTC(year, month, Math.min(anchorDay, lastDayOfNextMonth)))\n+  const end = new Date(periodStart)\n+  end.setUTCMonth(end.getUTCMonth() + 1)\n   return { start, end }\n }\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

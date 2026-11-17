@@ -1,0 +1,90 @@
+{
+  "pr": "pr04-invoice-next-page",
+  "condition": "diff-plain",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:28:03.333Z",
+  "duration_ms": 11727,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.012011,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 669,
+    "cache_read_input_tokens": 1010,
+    "output_tokens": 923,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 669,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 923,
+        "cache_read_input_tokens": 1010,
+        "cache_creation_input_tokens": 669,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 669
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 25,
+      "severity": "blocking",
+      "title": "slice(1, limit + 1) drops the first (newest) row of every page",
+      "explanation": "Arrays are zero-indexed, so rows.slice(1, limit + 1) skips rows[0] and returns only limit-1 rows when more exist (and limit-1 or fewer on the last page). Every page silently loses its first invoice; for a page that has exactly one row, the result is empty. Use rows.slice(0, limit). Combined with next_before taken from the last element of the page, the skipped invoices are never returned on any later page either, since the cursor is id < last id. This is data loss for users."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 27,
+      "severity": "blocking",
+      "title": "page[page.length - 1] can be undefined / wrong when hasMore is true",
+      "explanation": "With the off-by-one slice, if limit is 1, hasMore can be true while page is empty, so page[page.length - 1].id throws a TypeError and the request returns 500. Fixing the slice to slice(0, limit) resolves this, since page then always has limit >= 1 rows when hasMore is true. Also ensure limit is validated to be >= 1."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 22,
+      "severity": "non-blocking",
+      "title": "limit + 1 bypasses any max-limit clamp semantics and needs validation",
+      "explanation": "The query now fetches limit + 1 rows. Confirm that limit is parsed as an integer, clamped to a sane maximum and minimum (>= 1) before this point; otherwise a value such as a string, NaN, or a huge number makes limit + 1 produce string concatenation ('10' + 1 = '101') or an unexpectedly large query. Make sure the limit is a number, not a string from req.query."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 25,
+      "severity": "non-blocking",
+      "title": "No tests covering pagination boundaries",
+      "explanation": "This bug class (off-by-one at page edges) is exactly what tests catch. Add tests for: fewer than limit rows, exactly limit rows (next_before must be null), limit + 1 rows (next_before set to the id of the limit-th row, and the next page starts at the next invoice with no gaps or duplicates), and an empty result."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 25,
+      "severity": "nit",
+      "title": "Clarify naming and add a short comment",
+      "explanation": "Add a comment explaining that limit + 1 rows are fetched as a lookahead to detect another page, and consider naming the query parameter/variable (e.g. fetchLimit) so the intent is obvious to future readers."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/invoices.ts\", \"line\": 25, \"severity\": \"blocking\", \"title\": \"slice(1, limit + 1) drops the first (newest) row of every page\", \"explanation\": \"Arrays are zero-indexed, so rows.slice(1, limit + 1) skips rows[0] and returns only limit-1 rows when more exist (and limit-1 or fewer on the last page). Every page silently loses its first invoice; for a page that has exactly one row, the result is empty. Use rows.slice(0, limit). Combined with next_before taken from the last element of the page, the skipped invoices are never returned on any later page either, since the cursor is id < last id. This is data loss for users.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 27, \"severity\": \"blocking\", \"title\": \"page[page.length - 1] can be undefined / wrong when hasMore is true\", \"explanation\": \"With the off-by-one slice, if limit is 1, hasMore can be true while page is empty, so page[page.length - 1].id throws a TypeError and the request returns 500. Fixing the slice to slice(0, limit) resolves this, since page then always has limit >= 1 rows when hasMore is true. Also ensure limit is validated to be >= 1.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 22, \"severity\": \"non-blocking\", \"title\": \"limit + 1 bypasses any max-limit clamp semantics and needs validation\", \"explanation\": \"The query now fetches limit + 1 rows. Confirm that limit is parsed as an integer, clamped to a sane maximum and minimum (>= 1) before this point; otherwise a value such as a string, NaN, or a huge number makes limit + 1 produce string concatenation ('10' + 1 = '101') or an unexpectedly large query. Make sure the limit is a number, not a string from req.query.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 25, \"severity\": \"non-blocking\", \"title\": \"No tests covering pagination boundaries\", \"explanation\": \"This bug class (off-by-one at page edges) is exactly what tests catch. Add tests for: fewer than limit rows, exactly limit rows (next_before must be null), limit + 1 rows (next_before set to the id of the limit-th row, and the next page starts at the next invoice with no gaps or duplicates), and an empty result.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 25, \"severity\": \"nit\", \"title\": \"Clarify naming and add a short comment\", \"explanation\": \"Add a comment explaining that limit + 1 rows are fetched as a lookahead to detect another page, and consider naming the query parameter/variable (e.g. fetchLimit) so the intent is obvious to future readers.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Fix next_before when the last page is exactly full\n\nWhen the last page had exactly `limit` invoices, `next_before` was still set, so the web app made one extra request that came back empty. This fetches `limit + 1` rows to know whether another page exists.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex b9edb19..8e99e4e 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -19,11 +19,13 @@ invoicesRouter.get('/', async (req, res) => {\n       WHERE org_id = $1 AND ($2::bigint IS NULL OR id < $2)\n       ORDER BY id DESC\n       LIMIT $3`,\n-    [req.user.orgId, before ?? null, limit],\n+    [req.user.orgId, before ?? null, limit + 1],\n   )\n+  const hasMore = rows.length > limit\n+  const page = rows.slice(1, limit + 1)\n   res.json({\n-    invoices: rows.map(serializeInvoice),\n-    next_before: rows.length === limit ? rows[rows.length - 1].id : null,\n+    invoices: page.map(serializeInvoice),\n+    next_before: hasMore ? page[page.length - 1].id : null,\n   })\n })\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

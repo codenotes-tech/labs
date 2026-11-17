@@ -1,0 +1,76 @@
+{
+  "pr": "pr15-billable-project-count",
+  "condition": "diff-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:34:09.933Z",
+  "duration_ms": 12099,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.014972,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1527,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 886,
+    "output_tokens_details": {
+      "thinking_tokens": 294
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 1527,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 886,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 1527,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1527
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/services/usage.ts",
+      "line": 19,
+      "severity": "blocking",
+      "title": "Count includes every project, not just billable ones (likely overbilling)",
+      "explanation": "The query counts all rows in `projects` for the org, with no filter on state. The neighboring `activeProjectNames` is named for active projects, so `projects` probably has a column such as `archived_at`, `deleted_at` or `status` that it filters on. The diff doesn't show that query, so please confirm. If such a column exists, archived, deleted or soft-deleted projects would be billed, and this number feeds the invoice generator. Define what 'billable' means with product/billing, then apply the same predicate here. Ideally share one predicate or constant with `activeProjectNames` so the two can't drift apart."
+    },
+    {
+      "file": "src/services/usage.ts",
+      "line": 17,
+      "severity": "non-blocking",
+      "title": "Billing semantics are undocumented and no tests are included",
+      "explanation": "The comment 'one billable unit per project' doesn't say which projects count (archived, trial, free-tier, demo or internal projects) or when the count is taken. A billing figure also needs a point-in-time rule, such as the count at period end, the peak, or a time-weighted figure. A raw current count can differ from what the customer used during the billing period. Please document the rule and add tests covering active, archived and deleted projects, and an org with zero projects."
+    },
+    {
+      "file": "src/services/usage.ts",
+      "line": 18,
+      "severity": "nit",
+      "title": "Function is not scoped to the Business plan",
+      "explanation": "The comment says 'Business plan', but the function takes any `orgId` and does not check the plan. Either make it clear that the caller must check the plan, or rename or document it so it isn't used for other plans by mistake."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/services/usage.ts\", \"line\": 19, \"severity\": \"blocking\", \"title\": \"Count includes every project, not just billable ones (likely overbilling)\", \"explanation\": \"The query counts all rows in `projects` for the org, with no filter on state. The neighboring `activeProjectNames` is named for active projects, so `projects` probably has a column such as `archived_at`, `deleted_at` or `status` that it filters on. The diff doesn't show that query, so please confirm. If such a column exists, archived, deleted or soft-deleted projects would be billed, and this number feeds the invoice generator. Define what 'billable' means with product/billing, then apply the same predicate here. Ideally share one predicate or constant with `activeProjectNames` so the two can't drift apart.\"}, {\"file\": \"src/services/usage.ts\", \"line\": 17, \"severity\": \"non-blocking\", \"title\": \"Billing semantics are undocumented and no tests are included\", \"explanation\": \"The comment 'one billable unit per project' doesn't say which projects count (archived, trial, free-tier, demo or internal projects) or when the count is taken. A billing figure also needs a point-in-time rule, such as the count at period end, the peak, or a time-weighted figure. A raw current count can differ from what the customer used during the billing period. Please document the rule and add tests covering active, archived and deleted projects, and an org with zero projects.\"}, {\"file\": \"src/services/usage.ts\", \"line\": 18, \"severity\": \"nit\", \"title\": \"Function is not scoped to the Business plan\", \"explanation\": \"The comment says 'Business plan', but the function takes any `orgId` and does not check the plan. Either make it clear that the caller must check the plan, or rename or document it so it isn't used for other plans by mistake.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Count billable projects for per-project pricing\n\nThe Business plan moves to per-project pricing next month. Adds `billableProjectCount`, which the invoice generator will use to price each organization.\n\n## Diff\n\n```diff\ndiff --git a/src/services/usage.ts b/src/services/usage.ts\nindex 1d52088..3ab979d 100644\n--- a/src/services/usage.ts\n+++ b/src/services/usage.ts\n@@ -13,3 +13,9 @@ export async function activeProjectNames(orgId: number): Promise<string[]> {\n   )\n   return rows.map((r) => r.name)\n }\n+\n+// Business plan: one billable unit per project.\n+export async function billableProjectCount(orgId: number): Promise<number> {\n+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM projects WHERE org_id = $1', [orgId])\n+  return rows[0].n\n+}\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

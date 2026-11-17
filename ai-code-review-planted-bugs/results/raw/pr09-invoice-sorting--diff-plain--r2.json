@@ -1,0 +1,97 @@
+{
+  "pr": "pr09-invoice-sorting",
+  "condition": "diff-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:22:25.199Z",
+  "duration_ms": 13103,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.014369300000000002,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 667,
+    "cache_read_input_tokens": 1073,
+    "output_tokens": 1159,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 667,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1159,
+        "cache_read_input_tokens": 1073,
+        "cache_creation_input_tokens": 667,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 667
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 18,
+      "severity": "blocking",
+      "title": "SQL injection via unvalidated `sort` interpolated into ORDER BY",
+      "explanation": "`sort` is an arbitrary user-supplied string and is concatenated directly into the SQL text. Parameter binding cannot be used for identifiers, so an attacker can inject arbitrary SQL (subqueries, boolean/time-based data exfiltration, including across orgs, since the org_id filter does not protect against injected expressions in ORDER BY). Fix by validating with an allowlist, e.g. `sort: z.enum(['amount', 'created_at', 'id']).optional()`, and map each value to a hardcoded column string in a lookup object rather than interpolating the raw input."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 11,
+      "severity": "blocking",
+      "title": "Keyset pagination on `id` breaks when sorting by another column",
+      "explanation": "The `before` cursor still filters with `id < $2`, but when ordering by `amount` or `created_at` the row order is no longer by id. Page 2 will skip and/or repeat rows, because `id < last_id` has no relationship to the position in the sorted list. Use a composite keyset cursor (sort value plus id, e.g. `(amount, id) < ($x, $y)`) with the cursor encoding both values, or restrict sorting to a mode that uses offset pagination, or document that `before` is unsupported with `sort`. Also return a next cursor that carries the sort value."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "Ambiguous or nonexistent column names produce 500 errors",
+      "explanation": "Even without malicious input, a typo such as `sort=foo` causes a Postgres error that surfaces as an unhandled 500 (and may leak schema details in error messages). An enum validation in zod will return a clean 400 instead. Note that the async Express handler also does not catch rejected promises on older Express versions, so verify error handling."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "No sort direction option and always DESC",
+      "explanation": "The API only supports descending order. Users sorting by amount will likely want ascending as well. Consider an `order=asc|desc` parameter (also validated via enum) or a `-field` convention, and make sure the keyset comparison operator matches the direction."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "Missing indexes and tests for new sort paths",
+      "explanation": "Sorting by `amount` or `created_at` filtered by `org_id` may require a full scan and sort of the org's invoices. Consider composite indexes such as `(org_id, created_at, id)` and `(org_id, amount, id)`. Also add tests covering valid sorts, invalid sort values (400), injection attempts, and multi-page pagination consistency. NULLable columns also need explicit `NULLS LAST` handling to keep the cursor stable."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 10,
+      "severity": "nit",
+      "title": "Comment is outdated",
+      "explanation": "The comment 'Newest first, keyset pagination on id' no longer describes the behavior when `sort` is provided. Update it to reflect the new sorting and pagination semantics."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/invoices.ts\", \"line\": 18, \"severity\": \"blocking\", \"title\": \"SQL injection via unvalidated `sort` interpolated into ORDER BY\", \"explanation\": \"`sort` is an arbitrary user-supplied string and is concatenated directly into the SQL text. Parameter binding cannot be used for identifiers, so an attacker can inject arbitrary SQL (subqueries, boolean/time-based data exfiltration, including across orgs, since the org_id filter does not protect against injected expressions in ORDER BY). Fix by validating with an allowlist, e.g. `sort: z.enum(['amount', 'created_at', 'id']).optional()`, and map each value to a hardcoded column string in a lookup object rather than interpolating the raw input.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 11, \"severity\": \"blocking\", \"title\": \"Keyset pagination on `id` breaks when sorting by another column\", \"explanation\": \"The `before` cursor still filters with `id < $2`, but when ordering by `amount` or `created_at` the row order is no longer by id. Page 2 will skip and/or repeat rows, because `id < last_id` has no relationship to the position in the sorted list. Use a composite keyset cursor (sort value plus id, e.g. `(amount, id) < ($x, $y)`) with the cursor encoding both values, or restrict sorting to a mode that uses offset pagination, or document that `before` is unsupported with `sort`. Also return a next cursor that carries the sort value.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 18, \"severity\": \"non-blocking\", \"title\": \"Ambiguous or nonexistent column names produce 500 errors\", \"explanation\": \"Even without malicious input, a typo such as `sort=foo` causes a Postgres error that surfaces as an unhandled 500 (and may leak schema details in error messages). An enum validation in zod will return a clean 400 instead. Note that the async Express handler also does not catch rejected promises on older Express versions, so verify error handling.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 18, \"severity\": \"non-blocking\", \"title\": \"No sort direction option and always DESC\", \"explanation\": \"The API only supports descending order. Users sorting by amount will likely want ascending as well. Consider an `order=asc|desc` parameter (also validated via enum) or a `-field` convention, and make sure the keyset comparison operator matches the direction.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 18, \"severity\": \"non-blocking\", \"title\": \"Missing indexes and tests for new sort paths\", \"explanation\": \"Sorting by `amount` or `created_at` filtered by `org_id` may require a full scan and sort of the org's invoices. Consider composite indexes such as `(org_id, created_at, id)` and `(org_id, amount, id)`. Also add tests covering valid sorts, invalid sort values (400), injection attempts, and multi-page pagination consistency. NULLable columns also need explicit `NULLS LAST` handling to keep the cursor stable.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 10, \"severity\": \"nit\", \"title\": \"Comment is outdated\", \"explanation\": \"The comment 'Newest first, keyset pagination on id' no longer describes the behavior when `sort` is provided. Update it to reflect the new sorting and pagination semantics.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Let the web app sort invoices\n\nAdds an optional `sort` query parameter (for example `amount` or `created_at`) to `GET /invoices`.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex b9edb19..b742ca4 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -8,16 +8,18 @@ export const invoicesRouter = Router()\n const listSchema = z.object({\n   limit: z.coerce.number().int().min(1).max(100).default(25),\n   before: z.coerce.number().int().positive().optional(),\n+  sort: z.string().optional(),\n })\n \n // Newest first, keyset pagination on id.\n invoicesRouter.get('/', async (req, res) => {\n-  const { limit, before } = listSchema.parse(req.query)\n+  const { limit, before, sort } = listSchema.parse(req.query)\n+  const orderBy = sort ? `${sort} DESC, id DESC` : 'id DESC'\n   const { rows } = await pool.query(\n     `SELECT id, amount, currency, status, period_start, period_end, created_at\n        FROM invoices\n       WHERE org_id = $1 AND ($2::bigint IS NULL OR id < $2)\n-      ORDER BY id DESC\n+      ORDER BY ${orderBy}\n       LIMIT $3`,\n     [req.user.orgId, before ?? null, limit],\n   )\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

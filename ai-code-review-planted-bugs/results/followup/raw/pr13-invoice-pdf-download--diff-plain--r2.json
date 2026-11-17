@@ -1,0 +1,118 @@
+{
+  "pr": "pr13-invoice-pdf-download",
+  "condition": "diff-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:36:15.646Z",
+  "duration_ms": 26385,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.033067599999999996,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 662,
+    "cache_read_input_tokens": 1356,
+    "output_tokens": 3028,
+    "output_tokens_details": {
+      "thinking_tokens": 1490
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 662,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 3028,
+        "cache_read_input_tokens": 1356,
+        "cache_creation_input_tokens": 662,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 662
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 48,
+      "severity": "non-blocking",
+      "title": "Invoice ID is not validated; a non-numeric ID causes a 500",
+      "explanation": "`Number('abc')` is `NaN`, and Postgres rejects it as an integer parameter, so the route returns a 500 instead of a 404. Validate with `Number.isInteger(id)` (or a regex on the param) and return 404 or 400 before querying. Check how the existing `/:invoiceId` route handles this and stay consistent."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 43,
+      "severity": "non-blocking",
+      "title": "Async handler has no error handling",
+      "explanation": "If `pool.query` rejects, the promise rejection is unhandled under Express 4 and the request hangs or the process logs an unhandled rejection. Wrap the handler in try/catch, or use the project's async wrapper or error middleware if one exists."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 57,
+      "severity": "non-blocking",
+      "title": "Amount formatting assumes 2-decimal currencies and minor units",
+      "explanation": "`amount / 100` with `toFixed(2)` is wrong for zero-decimal currencies (JPY, KRW) and 3-decimal ones (KWD, BHD). On an accounting document that is a real correctness problem. Use `Intl.NumberFormat` with the currency, or reuse the existing money-formatting helper or serializer. Also confirm `amount` is an integer column. If it is `numeric` or `bigint`, `Number()` can lose precision or produce a wrong value."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 56,
+      "severity": "non-blocking",
+      "title": "Possible off-by-one date from toISOString",
+      "explanation": "If `period_start`/`period_end` are `date` columns, node-pg parses them as local-midnight `Date` objects. `toISOString()` converts to UTC, so on a server east of UTC the printed day can be one day earlier. Either select `to_char(period_start, 'YYYY-MM-DD')` in SQL or format using the same timezone assumptions as the rest of the code. It also throws if the column is NULL."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 57,
+      "severity": "non-blocking",
+      "title": "Misleading 'Amount due' label for non-open invoices",
+      "explanation": "The label is shown for every status, including paid, void and draft invoices. An accounting team may read a paid invoice as still owing money. Use a neutral label such as 'Amount', or vary it by status. Also decide whether draft or void invoices should be printable at all."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 58,
+      "severity": "non-blocking",
+      "title": "status, currency and id are interpolated into HTML without escaping",
+      "explanation": "Only `org_name` is escaped. `status` and `currency` are probably constrained values, but nothing in this code guarantees that, and a future free-text value would become stored XSS on the app origin. Escape every interpolated value (`escapeHtml(String(...))`), which is cheap and keeps the template consistently safe."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 53,
+      "severity": "nit",
+      "title": "Response lacks hardening headers and a complete HTML document",
+      "explanation": "Consider adding `X-Content-Type-Options: nosniff` and a restrictive `Content-Security-Policy` (e.g. `default-src 'none'; style-src 'unsafe-inline'`) as defense in depth for a hand-built HTML response. The markup also has no `<html lang>`, `<head>`, `<meta charset>`, `<title>` or print styles, so a saved or printed copy gets a default browser title and layout. Consider a `Content-Disposition` or a template file if the output will grow."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 61,
+      "severity": "nit",
+      "title": "Local escapeHtml helper and duplicated query",
+      "explanation": "Check whether the repo already has an HTML-escape or templating utility, and move the helper there if not. The SELECT also duplicates the logic of the existing `/:invoiceId` route. Extract a shared 'find invoice for org' function to keep the org-scoping check in one place."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 43,
+      "severity": "non-blocking",
+      "title": "No tests for the new endpoint",
+      "explanation": "Add tests for the happy path, a 404 for an invoice belonging to another organization (the key tenant-isolation guarantee), a non-numeric ID, HTML escaping of a malicious org name, and the unauthenticated case."
+    }
+  ],
+  "result_text": "{\"findings\":[{\"file\":\"src/routes/invoices.ts\",\"line\":48,\"severity\":\"non-blocking\",\"title\":\"Invoice ID is not validated; a non-numeric ID causes a 500\",\"explanation\":\"`Number('abc')` is `NaN`, and Postgres rejects it as an integer parameter, so the route returns a 500 instead of a 404. Validate with `Number.isInteger(id)` (or a regex on the param) and return 404 or 400 before querying. Check how the existing `/:invoiceId` route handles this and stay consistent.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":43,\"severity\":\"non-blocking\",\"title\":\"Async handler has no error handling\",\"explanation\":\"If `pool.query` rejects, the promise rejection is unhandled under Express 4 and the request hangs or the process logs an unhandled rejection. Wrap the handler in try/catch, or use the project's async wrapper or error middleware if one exists.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":57,\"severity\":\"non-blocking\",\"title\":\"Amount formatting assumes 2-decimal currencies and minor units\",\"explanation\":\"`amount / 100` with `toFixed(2)` is wrong for zero-decimal currencies (JPY, KRW) and 3-decimal ones (KWD, BHD). On an accounting document that is a real correctness problem. Use `Intl.NumberFormat` with the currency, or reuse the existing money-formatting helper or serializer. Also confirm `amount` is an integer column. If it is `numeric` or `bigint`, `Number()` can lose precision or produce a wrong value.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":56,\"severity\":\"non-blocking\",\"title\":\"Possible off-by-one date from toISOString\",\"explanation\":\"If `period_start`/`period_end` are `date` columns, node-pg parses them as local-midnight `Date` objects. `toISOString()` converts to UTC, so on a server east of UTC the printed day can be one day earlier. Either select `to_char(period_start, 'YYYY-MM-DD')` in SQL or format using the same timezone assumptions as the rest of the code. It also throws if the column is NULL.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":57,\"severity\":\"non-blocking\",\"title\":\"Misleading 'Amount due' label for non-open invoices\",\"explanation\":\"The label is shown for every status, including paid, void and draft invoices. An accounting team may read a paid invoice as still owing money. Use a neutral label such as 'Amount', or vary it by status. Also decide whether draft or void invoices should be printable at all.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":58,\"severity\":\"non-blocking\",\"title\":\"status, currency and id are interpolated into HTML without escaping\",\"explanation\":\"Only `org_name` is escaped. `status` and `currency` are probably constrained values, but nothing in this code guarantees that, and a future free-text value would become stored XSS on the app origin. Escape every interpolated value (`escapeHtml(String(...))`), which is cheap and keeps the template consistently safe.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":53,\"severity\":\"nit\",\"title\":\"Response lacks hardening headers and a complete HTML document\",\"explanation\":\"Consider adding `X-Content-Type-Options: nosniff` and a restrictive `Content-Security-Policy` (e.g. `default-src 'none'; style-src 'unsafe-inline'`) as defense in depth for a hand-built HTML response. The markup also has no `<html lang>`, `<head>`, `<meta charset>`, `<title>` or print styles, so a saved or printed copy gets a default browser title and layout. Consider a `Content-Disposition` or a template file if the output will grow.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":61,\"severity\":\"nit\",\"title\":\"Local escapeHtml helper and duplicated query\",\"explanation\":\"Check whether the repo already has an HTML-escape or templating utility, and move the helper there if not. The SELECT also duplicates the logic of the existing `/:invoiceId` route. Extract a shared 'find invoice for org' function to keep the org-scoping check in one place.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":43,\"severity\":\"non-blocking\",\"title\":\"No tests for the new endpoint\",\"explanation\":\"Add tests for the happy path, a 404 for an invoice belonging to another organization (the key tenant-isolation guarantee), a non-numeric ID, HTML escaping of a malicious org name, and the unauthenticated case.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add printable invoice download\n\nCustomers want a printable copy of an invoice for their accounting team. Adds `GET /invoices/:invoiceId/print`, which returns a simple HTML invoice. Scoped to the caller's organization like the other invoice routes.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex 938fffd..04598f2 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -39,3 +39,25 @@ invoicesRouter.get('/:invoiceId', async (req, res) => {\n   if (!rows[0]) return res.status(404).json({ error: 'not_found' })\n   res.json(serializeInvoice(rows[0]))\n })\n+\n+invoicesRouter.get('/:invoiceId/print', async (req, res) => {\n+  const { rows } = await pool.query(\n+    `SELECT i.id, i.amount, i.currency, i.status, i.period_start, i.period_end, o.name AS org_name\n+       FROM invoices i JOIN organizations o ON o.id = i.org_id\n+      WHERE i.id = $1 AND i.org_id = $2`,\n+    [Number(req.params.invoiceId), req.user.orgId],\n+  )\n+  const invoice = rows[0]\n+  if (!invoice) return res.status(404).json({ error: 'not_found' })\n+  const amount = (Number(invoice.amount) / 100).toFixed(2)\n+  res.type('html').send(`<!doctype html>\n+<h1>Invoice #${invoice.id}</h1>\n+<p>${escapeHtml(invoice.org_name)}</p>\n+<p>Period: ${invoice.period_start.toISOString().slice(0, 10)} to ${invoice.period_end.toISOString().slice(0, 10)}</p>\n+<p>Amount due: ${amount} ${invoice.currency.toUpperCase()}</p>\n+<p>Status: ${invoice.status}</p>`)\n+})\n+\n+function escapeHtml(value: string): string {\n+  return value.replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c] as string)\n+}\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

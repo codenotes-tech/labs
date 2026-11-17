@@ -1,0 +1,117 @@
+{
+  "pr": "pr06-amount-cents-field",
+  "condition": "repo-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:26:23.045Z",
+  "duration_ms": 14598,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.0219913,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 2295,
+    "cache_read_input_tokens": 13093,
+    "output_tokens": 1149,
+    "output_tokens_details": {
+      "thinking_tokens": 38
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2295,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 755,
+        "cache_read_input_tokens": 5376,
+        "cache_creation_input_tokens": 451,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 451
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-GByc9M/src/serializers/invoice.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "amount",
+        "output_mode": "content",
+        "-n": true,
+        "head_limit": 100
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "\\.amount\\b|amount:",
+        "output_mode": "content",
+        "-n": true,
+        "glob": "!node_modules/**"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-GByc9M/src/serializers/invoice.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "web/src/components/InvoiceRow.tsx",
+      "line": 10,
+      "severity": "blocking",
+      "title": "Frontend still reads the removed `amount` field",
+      "explanation": "The API no longer returns `amount`, so `invoice.amount / 100` evaluates to `undefined / 100`, which is NaN. The invoice table will show 'NaN' or '$NaN' for every row. Update the component to read `invoice.amount_cents`."
+    },
+    {
+      "file": "web/src/api/invoices.ts",
+      "line": 4,
+      "severity": "blocking",
+      "title": "Client type definition not updated for the renamed field",
+      "explanation": "The `Invoice` type still declares `amount: number // cents`. It no longer matches the API response, and it hides the break above from the type checker. Rename it to `amount_cents` so the compiler flags every remaining consumer."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Breaking API change with no compatibility or versioning plan",
+      "explanation": "Renaming a response field breaks every existing client, including external ones, the moment this is deployed. The web client in this repo is already affected. Either return both `amount` and `amount_cents` for a deprecation period, or version the API. Remove `amount` only after clients have migrated. If the web client and API deploy separately, the old client breaks in the gap, so the order of deployment matters."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "non-blocking",
+      "title": "No test or API docs update covers the new field name",
+      "explanation": "The PR has no tests, OpenAPI or docs changes for the response shape. Add or update a serializer test asserting `amount_cents`. Update any API documentation or changelog, and mention the breaking change there."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 3,
+      "severity": "nit",
+      "title": "Internal row field is still named `amount`",
+      "explanation": "`InvoiceRow.amount` is stored in cents (the migration says so), but its name does not say that. Consider renaming the DB column or the row property to `amount_cents` as well, so the unit is clear internally. This could be a follow-up PR, since a column rename needs a migration."
+    }
+  ],
+  "result_text": "```json\n{\"findings\": [{\"file\": \"web/src/components/InvoiceRow.tsx\", \"line\": 10, \"severity\": \"blocking\", \"title\": \"Frontend still reads the removed `amount` field\", \"explanation\": \"The API no longer returns `amount`, so `invoice.amount / 100` evaluates to `undefined / 100`, which is NaN. The invoice table will show 'NaN' or '$NaN' for every row. Update the component to read `invoice.amount_cents`.\"}, {\"file\": \"web/src/api/invoices.ts\", \"line\": 4, \"severity\": \"blocking\", \"title\": \"Client type definition not updated for the renamed field\", \"explanation\": \"The `Invoice` type still declares `amount: number // cents`. It no longer matches the API response, and it hides the break above from the type checker. Rename it to `amount_cents` so the compiler flags every remaining consumer.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Breaking API change with no compatibility or versioning plan\", \"explanation\": \"Renaming a response field breaks every existing client, including external ones, the moment this is deployed. The web client in this repo is already affected. Either return both `amount` and `amount_cents` for a deprecation period, or version the API. Remove `amount` only after clients have migrated. If the web client and API deploy separately, the old client breaks in the gap, so the order of deployment matters.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"non-blocking\", \"title\": \"No test or API docs update covers the new field name\", \"explanation\": \"The PR has no tests, OpenAPI or docs changes for the response shape. Add or update a serializer test asserting `amount_cents`. Update any API documentation or changelog, and mention the breaking change there.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 3, \"severity\": \"nit\", \"title\": \"Internal row field is still named `amount`\", \"explanation\": \"`InvoiceRow.amount` is stored in cents (the migration says so), but its name does not say that. Consider renaming the DB column or the row property to `amount_cents` as well, so the unit is clear internally. This could be a follow-up PR, since a column rename needs a migration.\"}]}\n```",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Rename invoice amount to amount_cents\n\n`amount` is ambiguous: people reading the API assume dollars. This renames the response field to `amount_cents` so the unit is explicit.\n\n## Diff\n\n```diff\ndiff --git a/src/serializers/invoice.ts b/src/serializers/invoice.ts\nindex 653d75e..9e281b3 100644\n--- a/src/serializers/invoice.ts\n+++ b/src/serializers/invoice.ts\n@@ -11,7 +11,7 @@ export interface InvoiceRow {\n export function serializeInvoice(row: InvoiceRow) {\n   return {\n     id: row.id,\n-    amount: Number(row.amount),\n+    amount_cents: Number(row.amount),\n     currency: row.currency,\n     status: row.status,\n     period_start: row.period_start.toISOString(),\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

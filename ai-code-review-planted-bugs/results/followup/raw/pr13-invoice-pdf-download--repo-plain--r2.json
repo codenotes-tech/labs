@@ -1,0 +1,122 @@
+{
+  "pr": "pr13-invoice-pdf-download",
+  "condition": "repo-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:34:22.246Z",
+  "duration_ms": 17915,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 3,
+  "cost_usd": 0.0366085,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 4873,
+    "cache_read_input_tokens": 7485,
+    "output_tokens": 1636,
+    "output_tokens_details": {
+      "thinking_tokens": 49
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 4873,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1294,
+        "cache_read_input_tokens": 4707,
+        "cache_creation_input_tokens": 2944,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 2944
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-ECniNS/src/routes/invoices.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "escapeHtml|currency|period_start|asyncHandler|express-async",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-ECniNS",
+        "glob": "!node_modules/**",
+        "output_mode": "content"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-ECniNS/src/routes/invoices.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 44,
+      "severity": "blocking",
+      "title": "Missing assertBillingAccess check on print route",
+      "explanation": "The other invoice routes (list and get-by-id) call assertBillingAccess(req.user) before querying. This route skips it. Any member of the org, including users without billing permission, could fetch full invoice details. Add assertBillingAccess(req.user) as the first line of the handler."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 52,
+      "severity": "blocking",
+      "title": "Amount divided by 100 instead of using money helpers",
+      "explanation": "docs/CONVENTIONS.md says never to multiply or divide by 100. Amounts are stored in minor units, and currencies differ: JPY and KRW have 0 decimals, BHD and KWD have 3. Dividing by 100 and using toFixed(2) will print wrong amounts for those currencies, by 100x for JPY and 10x for BHD. This is a financial document. Use fromMinorUnits(Number(invoice.amount), invoice.currency).toFixed(minorUnitDigits(invoice.currency)) from src/lib/money.ts. Also consider Intl.NumberFormat with the invoice currency."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 58,
+      "severity": "non-blocking",
+      "title": "Interpolated fields are not escaped consistently",
+      "explanation": "org_name is escaped, but invoice.status and invoice.currency are interpolated raw. They are probably constrained values today, but a printable HTML page served from the app origin should escape every interpolated string, so a later change to the data can't introduce XSS. Run status and currency through escapeHtml too."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 48,
+      "severity": "non-blocking",
+      "title": "Invalid invoiceId is not validated",
+      "explanation": "Number('abc') is NaN, which is passed to Postgres and likely causes a 500 from a bigint cast error rather than a 404 or 400. Non-integer or very large values behave the same way. The existing get route has the same flaw, but a new route should validate with zod (z.coerce.number().int().positive()) and return 400 or 404."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 56,
+      "severity": "non-blocking",
+      "title": "Period dates are rendered in UTC from TIMESTAMPTZ",
+      "explanation": "period_start and period_end are TIMESTAMPTZ. toISOString().slice(0, 10) gives the UTC date, which may differ from the customer's billing-period date if periods are not midnight UTC. Also, period_end may be an exclusive bound, so the printed 'to' date can look off by one. Confirm the intended semantics and format accordingly."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 53,
+      "severity": "non-blocking",
+      "title": "HTML response lacks charset, caching and download headers",
+      "explanation": "The page has no <meta charset> or <title>, so non-ASCII org names may render wrongly, and express's type('html') sets only a default charset header. Sensitive billing data is served without Cache-Control: private/no-store. Because the feature is described as a download, consider a Content-Disposition header. Add basic print styling too. There are also no tests for the new route, covering cross-org access (404), permission denial, and non-2-decimal currencies."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 61,
+      "severity": "nit",
+      "title": "Inline HTML template and escape helper in the route file",
+      "explanation": "The template and escapeHtml helper are inlined in the route module. Consider moving them to a view or util module so they can be reused and unit-tested. The function is also declared after use (hoisted, so it works) and the one-line map lookup is hard to read, so extract the escape map to a constant."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/invoices.ts\", \"line\": 44, \"severity\": \"blocking\", \"title\": \"Missing assertBillingAccess check on print route\", \"explanation\": \"The other invoice routes (list and get-by-id) call assertBillingAccess(req.user) before querying. This route skips it. Any member of the org, including users without billing permission, could fetch full invoice details. Add assertBillingAccess(req.user) as the first line of the handler.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 52, \"severity\": \"blocking\", \"title\": \"Amount divided by 100 instead of using money helpers\", \"explanation\": \"docs/CONVENTIONS.md says never to multiply or divide by 100. Amounts are stored in minor units, and currencies differ: JPY and KRW have 0 decimals, BHD and KWD have 3. Dividing by 100 and using toFixed(2) will print wrong amounts for those currencies, by 100x for JPY and 10x for BHD. This is a financial document. Use fromMinorUnits(Number(invoice.amount), invoice.currency).toFixed(minorUnitDigits(invoice.currency)) from src/lib/money.ts. Also consider Intl.NumberFormat with the invoice currency.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 58, \"severity\": \"non-blocking\", \"title\": \"Interpolated fields are not escaped consistently\", \"explanation\": \"org_name is escaped, but invoice.status and invoice.currency are interpolated raw. They are probably constrained values today, but a printable HTML page served from the app origin should escape every interpolated string, so a later change to the data can't introduce XSS. Run status and currency through escapeHtml too.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 48, \"severity\": \"non-blocking\", \"title\": \"Invalid invoiceId is not validated\", \"explanation\": \"Number('abc') is NaN, which is passed to Postgres and likely causes a 500 from a bigint cast error rather than a 404 or 400. Non-integer or very large values behave the same way. The existing get route has the same flaw, but a new route should validate with zod (z.coerce.number().int().positive()) and return 400 or 404.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 56, \"severity\": \"non-blocking\", \"title\": \"Period dates are rendered in UTC from TIMESTAMPTZ\", \"explanation\": \"period_start and period_end are TIMESTAMPTZ. toISOString().slice(0, 10) gives the UTC date, which may differ from the customer's billing-period date if periods are not midnight UTC. Also, period_end may be an exclusive bound, so the printed 'to' date can look off by one. Confirm the intended semantics and format accordingly.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 53, \"severity\": \"non-blocking\", \"title\": \"HTML response lacks charset, caching and download headers\", \"explanation\": \"The page has no <meta charset> or <title>, so non-ASCII org names may render wrongly, and express's type('html') sets only a default charset header. Sensitive billing data is served without Cache-Control: private/no-store. Because the feature is described as a download, consider a Content-Disposition header. Add basic print styling too. There are also no tests for the new route, covering cross-org access (404), permission denial, and non-2-decimal currencies.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 61, \"severity\": \"nit\", \"title\": \"Inline HTML template and escape helper in the route file\", \"explanation\": \"The template and escapeHtml helper are inlined in the route module. Consider moving them to a view or util module so they can be reused and unit-tested. The function is also declared after use (hoisted, so it works) and the one-line map lookup is hard to read, so extract the escape map to a constant.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add printable invoice download\n\nCustomers want a printable copy of an invoice for their accounting team. Adds `GET /invoices/:invoiceId/print`, which returns a simple HTML invoice. Scoped to the caller's organization like the other invoice routes.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex 938fffd..04598f2 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -39,3 +39,25 @@ invoicesRouter.get('/:invoiceId', async (req, res) => {\n   if (!rows[0]) return res.status(404).json({ error: 'not_found' })\n   res.json(serializeInvoice(rows[0]))\n })\n+\n+invoicesRouter.get('/:invoiceId/print', async (req, res) => {\n+  const { rows } = await pool.query(\n+    `SELECT i.id, i.amount, i.currency, i.status, i.period_start, i.period_end, o.name AS org_name\n+       FROM invoices i JOIN organizations o ON o.id = i.org_id\n+      WHERE i.id = $1 AND i.org_id = $2`,\n+    [Number(req.params.invoiceId), req.user.orgId],\n+  )\n+  const invoice = rows[0]\n+  if (!invoice) return res.status(404).json({ error: 'not_found' })\n+  const amount = (Number(invoice.amount) / 100).toFixed(2)\n+  res.type('html').send(`<!doctype html>\n+<h1>Invoice #${invoice.id}</h1>\n+<p>${escapeHtml(invoice.org_name)}</p>\n+<p>Period: ${invoice.period_start.toISOString().slice(0, 10)} to ${invoice.period_end.toISOString().slice(0, 10)}</p>\n+<p>Amount due: ${amount} ${invoice.currency.toUpperCase()}</p>\n+<p>Status: ${invoice.status}</p>`)\n+})\n+\n+function escapeHtml(value: string): string {\n+  return value.replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c] as string)\n+}\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

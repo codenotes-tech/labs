@@ -1,0 +1,14 @@
+diff --git a/src/services/usage.ts b/src/services/usage.ts
+index 1d52088..3ab979d 100644
+--- a/src/services/usage.ts
++++ b/src/services/usage.ts
+@@ -13,3 +13,9 @@ export async function activeProjectNames(orgId: number): Promise<string[]> {
+   )
+   return rows.map((r) => r.name)
+ }
++
++// Business plan: one billable unit per project.
++export async function billableProjectCount(orgId: number): Promise<number> {
++  const { rows } = await pool.query('SELECT count(*)::int AS n FROM projects WHERE org_id = $1', [orgId])
++  return rows[0].n
++}

@@ -1,0 +1,87 @@
+{
+  "pr": "pr11-proration-tests",
+  "condition": "repo-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:22:38.567Z",
+  "duration_ms": 10655,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 3,
+  "cost_usd": 0.0204534,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 3252,
+    "cache_read_input_tokens": 7374,
+    "output_tokens": 670,
+    "output_tokens_details": {
+      "thinking_tokens": 66
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 3252,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 374,
+        "cache_read_input_tokens": 4596,
+        "cache_creation_input_tokens": 1434,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1434
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "proratedAmount",
+        "output_mode": "content",
+        "-A": 15,
+        "glob": "!tests/**"
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-LrTRgZ/tests/billing.test.ts"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-LrTRgZ/tests/billing.test.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "tests/billing.test.ts",
+      "line": 37,
+      "severity": "nit",
+      "title": "Test name says 'partial month' but the case is a round number",
+      "explanation": "Ten days of thirty is exactly 2/3, so the result is a clean 2000 and the test never exercises the rounding in `Math.round`. Consider adding a case that produces a fractional result, such as 3000 cents after 1 day, which gives 2900, or an amount like 1000 after 10 days, which gives 666.67 and rounds to 667. That would pin down the rounding behaviour."
+    },
+    {
+      "file": "tests/billing.test.ts",
+      "line": 23,
+      "severity": "nit",
+      "title": "Repeated fixtures and untested degenerate period",
+      "explanation": "`start` and `end` are redefined in every test. Hoisting them to shared constants would cut the duplication. Also not covered is a zero-length period (start === end), where `total` is 0 and `proratedAmount` divides by zero and returns NaN. That is outside this PR's stated scope, but worth a follow-up test or a guard in the implementation."
+    }
+  ],
+  "result_text": "```json\n{\"findings\": [{\"file\": \"tests/billing.test.ts\", \"line\": 37, \"severity\": \"nit\", \"title\": \"Test name says 'partial month' but the case is a round number\", \"explanation\": \"Ten days of thirty is exactly 2/3, so the result is a clean 2000 and the test never exercises the rounding in `Math.round`. Consider adding a case that produces a fractional result, such as 3000 cents after 1 day, which gives 2900, or an amount like 1000 after 10 days, which gives 666.67 and rounds to 667. That would pin down the rounding behaviour.\"}, {\"file\": \"tests/billing.test.ts\", \"line\": 23, \"severity\": \"nit\", \"title\": \"Repeated fixtures and untested degenerate period\", \"explanation\": \"`start` and `end` are redefined in every test. Hoisting them to shared constants would cut the duplication. Also not covered is a zero-length period (start === end), where `total` is 0 and `proratedAmount` divides by zero and returns NaN. That is outside this PR's stated scope, but worth a follow-up test or a guard in the implementation.\"}]}\n```",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add edge-case tests for proration\n\nCovers cancellations at the start and end of a period, before it starts, after it ends, and a partial month.\n\n## Diff\n\n```diff\ndiff --git a/tests/billing.test.ts b/tests/billing.test.ts\nindex 0d7643a..81a4aa1 100644\n--- a/tests/billing.test.ts\n+++ b/tests/billing.test.ts\n@@ -19,4 +19,24 @@ describe('proratedAmount', () => {\n     const end = new Date('2026-05-01T00:00:00Z')\n     expect(proratedAmount(3000, start, end, new Date('2026-04-16T00:00:00Z'))).toBe(1500)\n   })\n+\n+  it('refunds everything when cancelled at or before the start', () => {\n+    const start = new Date('2026-04-01T00:00:00Z')\n+    const end = new Date('2026-05-01T00:00:00Z')\n+    expect(proratedAmount(3000, start, end, start)).toBe(3000)\n+    expect(proratedAmount(3000, start, end, new Date('2026-03-20T00:00:00Z'))).toBe(3000)\n+  })\n+\n+  it('refunds nothing when cancelled at or after the end', () => {\n+    const start = new Date('2026-04-01T00:00:00Z')\n+    const end = new Date('2026-05-01T00:00:00Z')\n+    expect(proratedAmount(3000, start, end, end)).toBe(0)\n+    expect(proratedAmount(3000, start, end, new Date('2026-05-09T00:00:00Z'))).toBe(0)\n+  })\n+\n+  it('refunds two thirds after ten days of a thirty-day period', () => {\n+    const start = new Date('2026-04-01T00:00:00Z')\n+    const end = new Date('2026-05-01T00:00:00Z')\n+    expect(proratedAmount(3000, start, end, new Date('2026-04-11T00:00:00Z'))).toBe(2000)\n+  })\n })\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

@@ -1,0 +1,130 @@
+{
+  "pr": "pr01-project-events-csv",
+  "condition": "repo-checklist",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:20:21.325Z",
+  "duration_ms": 24679,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.034518900000000005,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 2971,
+    "cache_read_input_tokens": 14929,
+    "output_tokens": 2113,
+    "output_tokens_details": {
+      "thinking_tokens": 362
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2971,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1658,
+        "cache_read_input_tokens": 6447,
+        "cache_creation_input_tokens": 436,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 436
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cBGFUB/src/routes/projects.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "events",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cBGFUB/src",
+        "output_mode": "content"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "assertProjectAccess",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cBGFUB/src/auth/permissions.ts",
+        "output_mode": "content",
+        "-A": 20
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-cBGFUB/src/routes/projects.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/projects.ts",
+      "line": 54,
+      "severity": "blocking",
+      "title": "Missing authorization check on CSV export (cross-tenant data leak)",
+      "explanation": "Every other project route calls `assertProjectAccess(req.user, projectId)`. This one doesn't. Any authenticated user, including one from another org or a non-member with the `member` role, can download up to 10,000 events for any project ID by iterating IDs. Add `await assertProjectAccess(req.user, projectId)` before the query, as the JSON events endpoint does. Add a test that covers a different org and a non-member."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 63,
+      "severity": "blocking",
+      "title": "Payload and field escaping is not valid CSV",
+      "explanation": "`JSON.stringify(JSON.stringify(payload))` creates a JS/JSON string literal, which escapes quotes as `\\\"`. CSV requires quotes to be doubled (`\"\"`). Excel, Python's csv module and other strict parsers will misparse any row with a payload, because every payload contains quotes. `kind` is also written raw, so a comma, quote or newline in it shifts columns. Use a CSV library, or write a helper that wraps each field in quotes and replaces `\"` with `\"\"`. Apply it to every text field. Add a test with payloads that contain quotes, commas and newlines."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 63,
+      "severity": "non-blocking",
+      "title": "CSV/formula injection risk",
+      "explanation": "Event `kind` and payload content can come from end users. Spreadsheet apps treat cells starting with `=`, `+`, `-` or `@` as formulas. Since the file is meant to be opened in Excel, prefix such values with `'` (or a tab) in the escaping helper."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 55,
+      "severity": "non-blocking",
+      "title": "Whole result set is buffered in memory and the export is unbounded in cost",
+      "explanation": "`pool.query` loads 10,000 rows with full JSON payloads into memory per request. Concurrent exports can put real pressure on the heap and the DB pool. Stream with a cursor or `pg-query-stream`, and respect backpressure (`res.write` return value or `pipeline`). Consider rate-limiting this endpoint. If the `events (project_id, id)` index is missing, check that this query isn't a sort over a large table."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 61,
+      "severity": "non-blocking",
+      "title": "Errors after headers are sent, and column order differs from the SELECT",
+      "explanation": "Headers and part of the body are written before the loop finishes. An error mid-stream gives the client a truncated file that looks successful. Building the full body first, or handling streaming errors by destroying the response, avoids that. The task also says 'same query as JSON endpoint', but the limit is now 10,000 and the column order is `created_at, payload`, unlike the SELECT. This is harmless but worth keeping consistent."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 54,
+      "severity": "nit",
+      "title": "Input validation and content type",
+      "explanation": "`Number(req.params.projectId)` can be NaN. Validate it as an integer, ideally in a shared helper, since it's repeated in every route. Set `content-type` to `text/csv; charset=utf-8`. Consider adding `cache-control: no-store` for sensitive data. Duplicating the query from the JSON endpoint could be factored into a shared function with a limit parameter."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 63,
+      "severity": "nit",
+      "title": "Timestamp handling assumes a Date object",
+      "explanation": "`row.created_at.toISOString()` throws if the column is null or the driver returns a string, for example with a `timestamp` type parser override. That would crash mid-stream after the headers are sent. Confirm the column is `timestamptz` and NOT NULL, or handle it defensively."
+    }
+  ],
+  "result_text": "{\"findings\":[{\"file\":\"src/routes/projects.ts\",\"line\":54,\"severity\":\"blocking\",\"title\":\"Missing authorization check on CSV export (cross-tenant data leak)\",\"explanation\":\"Every other project route calls `assertProjectAccess(req.user, projectId)`. This one doesn't. Any authenticated user, including one from another org or a non-member with the `member` role, can download up to 10,000 events for any project ID by iterating IDs. Add `await assertProjectAccess(req.user, projectId)` before the query, as the JSON events endpoint does. Add a test that covers a different org and a non-member.\"},{\"file\":\"src/routes/projects.ts\",\"line\":63,\"severity\":\"blocking\",\"title\":\"Payload and field escaping is not valid CSV\",\"explanation\":\"`JSON.stringify(JSON.stringify(payload))` creates a JS/JSON string literal, which escapes quotes as `\\\\\\\"`. CSV requires quotes to be doubled (`\\\"\\\"`). Excel, Python's csv module and other strict parsers will misparse any row with a payload, because every payload contains quotes. `kind` is also written raw, so a comma, quote or newline in it shifts columns. Use a CSV library, or write a helper that wraps each field in quotes and replaces `\\\"` with `\\\"\\\"`. Apply it to every text field. Add a test with payloads that contain quotes, commas and newlines.\"},{\"file\":\"src/routes/projects.ts\",\"line\":63,\"severity\":\"non-blocking\",\"title\":\"CSV/formula injection risk\",\"explanation\":\"Event `kind` and payload content can come from end users. Spreadsheet apps treat cells starting with `=`, `+`, `-` or `@` as formulas. Since the file is meant to be opened in Excel, prefix such values with `'` (or a tab) in the escaping helper.\"},{\"file\":\"src/routes/projects.ts\",\"line\":55,\"severity\":\"non-blocking\",\"title\":\"Whole result set is buffered in memory and the export is unbounded in cost\",\"explanation\":\"`pool.query` loads 10,000 rows with full JSON payloads into memory per request. Concurrent exports can put real pressure on the heap and the DB pool. Stream with a cursor or `pg-query-stream`, and respect backpressure (`res.write` return value or `pipeline`). Consider rate-limiting this endpoint. If the `events (project_id, id)` index is missing, check that this query isn't a sort over a large table.\"},{\"file\":\"src/routes/projects.ts\",\"line\":61,\"severity\":\"non-blocking\",\"title\":\"Errors after headers are sent, and column order differs from the SELECT\",\"explanation\":\"Headers and part of the body are written before the loop finishes. An error mid-stream gives the client a truncated file that looks successful. Building the full body first, or handling streaming errors by destroying the response, avoids that. The task also says 'same query as JSON endpoint', but the limit is now 10,000 and the column order is `created_at, payload`, unlike the SELECT. This is harmless but worth keeping consistent.\"},{\"file\":\"src/routes/projects.ts\",\"line\":54,\"severity\":\"nit\",\"title\":\"Input validation and content type\",\"explanation\":\"`Number(req.params.projectId)` can be NaN. Validate it as an integer, ideally in a shared helper, since it's repeated in every route. Set `content-type` to `text/csv; charset=utf-8`. Consider adding `cache-control: no-store` for sensitive data. Duplicating the query from the JSON endpoint could be factored into a shared function with a limit parameter.\"},{\"file\":\"src/routes/projects.ts\",\"line\":63,\"severity\":\"nit\",\"title\":\"Timestamp handling assumes a Date object\",\"explanation\":\"`row.created_at.toISOString()` throws if the column is null or the driver returns a string, for example with a `timestamp` type parser override. That would crash mid-stream after the headers are sent. Confirm the column is `timestamptz` and NOT NULL, or handle it defensively.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add CSV export for project events\n\nCustomers asked to download a project's activity log. Adds `GET /projects/:projectId/events.csv`, which returns the latest 10,000 events as CSV. Same query as the JSON events endpoint, larger limit.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/projects.ts b/src/routes/projects.ts\nindex c30f46c..b019274 100644\n--- a/src/routes/projects.ts\n+++ b/src/routes/projects.ts\n@@ -49,3 +49,18 @@ projectsRouter.delete('/:projectId', async (req, res) => {\n   await pool.query('UPDATE projects SET archived_at = now() WHERE id = $1', [projectId])\n   res.status(204).end()\n })\n+\n+projectsRouter.get('/:projectId/events.csv', async (req, res) => {\n+  const projectId = Number(req.params.projectId)\n+  const { rows } = await pool.query(\n+    'SELECT id, kind, payload, created_at FROM events WHERE project_id = $1 ORDER BY id DESC LIMIT 10000',\n+    [projectId],\n+  )\n+  res.setHeader('content-type', 'text/csv')\n+  res.setHeader('content-disposition', `attachment; filename=\"project-${projectId}-events.csv\"`)\n+  res.write('id,kind,created_at,payload\\n')\n+  for (const row of rows) {\n+    res.write([row.id, row.kind, row.created_at.toISOString(), JSON.stringify(JSON.stringify(row.payload))].join(',') + '\\n')\n+  }\n+  res.end()\n+})\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

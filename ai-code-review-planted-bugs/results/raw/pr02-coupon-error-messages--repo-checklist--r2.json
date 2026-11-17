@@ -1,0 +1,90 @@
+{
+  "pr": "pr02-coupon-error-messages",
+  "condition": "repo-checklist",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:20:46.223Z",
+  "duration_ms": 97661,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 2,
+  "cost_usd": 0.0422956,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 4213,
+    "cache_read_input_tokens": 5556,
+    "output_tokens": 1838,
+    "output_tokens_details": {
+      "thinking_tokens": 538
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 4213,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1830,
+        "cache_read_input_tokens": 2778,
+        "cache_creation_input_tokens": 2131,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 2131
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/coupons.ts",
+      "line": 12,
+      "severity": "blocking",
+      "title": "Check-then-update race allows over-redemption",
+      "explanation": "The old single UPDATE checked `redemptions < max_redemptions` and incremented in one atomic statement. The new code reads the row with a plain SELECT and checks in application code. It then runs an unconditional `UPDATE ... SET redemptions = redemptions + 1`. Under the default READ COMMITTED isolation, two concurrent requests can both read `redemptions = max - 1`, both pass the check, and both increment. The coupon is then redeemed more than `max_redemptions` times, which is a direct financial leak. A transaction does not prevent this without row locks. Fix by keeping the guarded atomic UPDATE (`WHERE code=$1 AND redemptions < max_redemptions AND (expires_at IS NULL OR expires_at > now()) RETURNING percent_off`). When rowCount is 0, run a follow-up SELECT only to work out which error to return. Alternatively use `SELECT ... FOR UPDATE`, and also add the guard to the UPDATE. A concurrency test should cover this."
+    },
+    {
+      "file": "src/routes/coupons.ts",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "Expiry is checked against the app server clock, not the DB clock",
+      "explanation": "The original query used the database's `now()`. The new code compares `expires_at` to `new Date()` in Node. Clock skew between app instances and the DB can make expiry behave inconsistently across instances. The result also depends on the column type: a `timestamp` without time zone can be parsed by the driver in the server's local zone, shifting expiry by hours. Compute the expiry in SQL, for example `SELECT ..., (expires_at IS NOT NULL AND expires_at <= now()) AS expired`. Also keep the boundary consistent with the old behaviour, where `expires_at > now()` is valid."
+    },
+    {
+      "file": "src/routes/coupons.ts",
+      "line": 24,
+      "severity": "non-blocking",
+      "title": "Breaking change to the API error contract",
+      "explanation": "The response used to be `409 {error: 'coupon_unavailable'}` for every failure. It is now `coupon_not_found`, `coupon_expired` or `coupon_used_up`, all with 409. Existing clients, such as the frontend or integrations that match on `coupon_unavailable`, will stop handling the failure correctly. Check the consumers and update them in the same release. You could also keep a stable top-level code and add a separate `reason` field. An unknown code is conventionally a 404, and the mixed semantics under a single 409 should be documented."
+    },
+    {
+      "file": "src/routes/coupons.ts",
+      "line": 17,
+      "severity": "non-blocking",
+      "title": "Distinct errors let callers enumerate valid coupon codes",
+      "explanation": "Returning `coupon_not_found` separately from `expired` and `used_up` confirms which codes exist. Any authenticated org can brute-force or guess codes, and the minimum code length is only 3. Make sure this endpoint is rate-limited per user or org. Failed attempts should also be logged or monitored. If enumeration is a concern, expose the detailed reason only to support tooling. Also confirm that the 3-character minimum is intended."
+    },
+    {
+      "file": "src/routes/coupons.ts",
+      "line": 21,
+      "severity": "nit",
+      "title": "Duplicate redemptions by the same org are not guarded, and there are no tests",
+      "explanation": "The INSERT into `coupon_redemptions` has no visible uniqueness on `(code, org_id)`, so a retry or double-click consumes extra redemptions. This was already true before the PR, but the split lookup makes it easier to extend. Consider a unique constraint with `ON CONFLICT`, or an idempotency key. Add tests for each error path and for concurrent redemption of the last remaining use."
+    }
+  ],
+  "result_text": "{\"findings\":[{\"file\":\"src/routes/coupons.ts\",\"line\":12,\"severity\":\"blocking\",\"title\":\"Check-then-update race allows over-redemption\",\"explanation\":\"The old single UPDATE checked `redemptions < max_redemptions` and incremented in one atomic statement. The new code reads the row with a plain SELECT and checks in application code. It then runs an unconditional `UPDATE ... SET redemptions = redemptions + 1`. Under the default READ COMMITTED isolation, two concurrent requests can both read `redemptions = max - 1`, both pass the check, and both increment. The coupon is then redeemed more than `max_redemptions` times, which is a direct financial leak. A transaction does not prevent this without row locks. Fix by keeping the guarded atomic UPDATE (`WHERE code=$1 AND redemptions < max_redemptions AND (expires_at IS NULL OR expires_at > now()) RETURNING percent_off`). When rowCount is 0, run a follow-up SELECT only to work out which error to return. Alternatively use `SELECT ... FOR UPDATE`, and also add the guard to the UPDATE. A concurrency test should cover this.\"},{\"file\":\"src/routes/coupons.ts\",\"line\":18,\"severity\":\"non-blocking\",\"title\":\"Expiry is checked against the app server clock, not the DB clock\",\"explanation\":\"The original query used the database's `now()`. The new code compares `expires_at` to `new Date()` in Node. Clock skew between app instances and the DB can make expiry behave inconsistently across instances. The result also depends on the column type: a `timestamp` without time zone can be parsed by the driver in the server's local zone, shifting expiry by hours. Compute the expiry in SQL, for example `SELECT ..., (expires_at IS NOT NULL AND expires_at <= now()) AS expired`. Also keep the boundary consistent with the old behaviour, where `expires_at > now()` is valid.\"},{\"file\":\"src/routes/coupons.ts\",\"line\":24,\"severity\":\"non-blocking\",\"title\":\"Breaking change to the API error contract\",\"explanation\":\"The response used to be `409 {error: 'coupon_unavailable'}` for every failure. It is now `coupon_not_found`, `coupon_expired` or `coupon_used_up`, all with 409. Existing clients, such as the frontend or integrations that match on `coupon_unavailable`, will stop handling the failure correctly. Check the consumers and update them in the same release. You could also keep a stable top-level code and add a separate `reason` field. An unknown code is conventionally a 404, and the mixed semantics under a single 409 should be documented.\"},{\"file\":\"src/routes/coupons.ts\",\"line\":17,\"severity\":\"non-blocking\",\"title\":\"Distinct errors let callers enumerate valid coupon codes\",\"explanation\":\"Returning `coupon_not_found` separately from `expired` and `used_up` confirms which codes exist. Any authenticated org can brute-force or guess codes, and the minimum code length is only 3. Make sure this endpoint is rate-limited per user or org. Failed attempts should also be logged or monitored. If enumeration is a concern, expose the detailed reason only to support tooling. Also confirm that the 3-character minimum is intended.\"},{\"file\":\"src/routes/coupons.ts\",\"line\":21,\"severity\":\"nit\",\"title\":\"Duplicate redemptions by the same org are not guarded, and there are no tests\",\"explanation\":\"The INSERT into `coupon_redemptions` has no visible uniqueness on `(code, org_id)`, so a retry or double-click consumes extra redemptions. This was already true before the PR, but the split lookup makes it easier to extend. Consider a unique constraint with `ON CONFLICT`, or an idempotency key. Add tests for each error path and for concurrent redemption of the last remaining use.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Return specific errors when a coupon can't be redeemed\n\nSupport keeps asking why a coupon \"didn't work\". This splits the single UPDATE into a lookup plus explicit checks, so the API can say whether the code is unknown, expired, or used up. Still runs in one transaction.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/coupons.ts b/src/routes/coupons.ts\nindex c792f9c..7cceb2a 100644\n--- a/src/routes/coupons.ts\n+++ b/src/routes/coupons.ts\n@@ -9,18 +9,18 @@ const redeemSchema = z.object({ code: z.string().min(3).max(64) })\n couponsRouter.post('/redeem', async (req, res) => {\n   const { code } = redeemSchema.parse(req.body)\n   const result = await withTransaction(async (client) => {\n-    // One atomic statement: the row is only updated while redemptions remain.\n-    const updated = await client.query(\n-      `UPDATE coupons SET redemptions = redemptions + 1\n-        WHERE code = $1 AND redemptions < max_redemptions\n-          AND (expires_at IS NULL OR expires_at > now())\n-        RETURNING percent_off`,\n+    const { rows } = await client.query(\n+      'SELECT percent_off, max_redemptions, redemptions, expires_at FROM coupons WHERE code = $1',\n       [code],\n     )\n-    if (updated.rowCount === 0) return null\n+    const coupon = rows[0]\n+    if (!coupon) return { error: 'coupon_not_found' as const }\n+    if (coupon.expires_at && coupon.expires_at <= new Date()) return { error: 'coupon_expired' as const }\n+    if (coupon.redemptions >= coupon.max_redemptions) return { error: 'coupon_used_up' as const }\n+    await client.query('UPDATE coupons SET redemptions = redemptions + 1 WHERE code = $1', [code])\n     await client.query('INSERT INTO coupon_redemptions (code, org_id) VALUES ($1, $2)', [code, req.user.orgId])\n-    return updated.rows[0]\n+    return { percent_off: coupon.percent_off as number }\n   })\n-  if (!result) return res.status(409).json({ error: 'coupon_unavailable' })\n+  if ('error' in result) return res.status(409).json({ error: result.error })\n   res.json({ percent_off: result.percent_off })\n })\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

@@ -1,0 +1,31 @@
+diff --git a/src/routes/payments.ts b/src/routes/payments.ts
+index 145304a..3f7c30c 100644
+--- a/src/routes/payments.ts
++++ b/src/routes/payments.ts
+@@ -2,6 +2,7 @@ import { Router } from 'express'
+ import { z } from 'zod'
+ import { pool } from '../db.js'
+ import { createCharge } from '../lib/provider.js'
++import { withRetry } from '../lib/retry.js'
+ import { logger } from '../lib/logger.js'
+ 
+ export const paymentsRouter = Router()
+@@ -19,11 +20,13 @@ paymentsRouter.post('/', async (req, res) => {
+   const invoice = rows[0]
+   if (!invoice) return res.status(404).json({ error: 'invoice_not_payable' })
+ 
+-  const charge = await createCharge({
+-    amount: Number(invoice.amount),
+-    currency: invoice.currency,
+-    customerId: invoice.provider_customer_id,
+-  })
++  const charge = await withRetry(() =>
++    createCharge({
++      amount: Number(invoice.amount),
++      currency: invoice.currency,
++      customerId: invoice.provider_customer_id,
++    }),
++  )
+ 
+   await pool.query(
+     `INSERT INTO payments (org_id, invoice_id, provider_charge_id, amount, status) VALUES ($1, $2, $3, $4, $5)`,

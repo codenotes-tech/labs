@@ -1,0 +1,70 @@
+[
+  {
+    "id": "pr13-invoice-pdf-download",
+    "title": "Add printable invoice download",
+    "planted_bug": {
+      "category": "missing role check (repo rule)",
+      "visibility": "repo-rule",
+      "file": "src/routes/invoices.ts",
+      "marker": "invoicesRouter.get('/:invoiceId/print'",
+      "summary": "The route filters by organization but never calls assertBillingAccess, so members, who must not see billing, can print any invoice of their organization.",
+      "keywords": [
+        "assertbillingaccess",
+        "billing access",
+        "member",
+        "role",
+        "owner",
+        "admin"
+      ],
+      "line": 43
+    }
+  },
+  {
+    "id": "pr14-annual-plan-pricing",
+    "title": "Add annual plan pricing",
+    "planted_bug": {
+      "category": "wrong currency conversion (repo rule)",
+      "visibility": "repo-rule",
+      "file": "src/services/pricing.ts",
+      "marker": "return Math.round(monthly * 12 * 0.9 * 100)",
+      "summary": "Multiplying by 100 assumes two decimal places; JPY and KRW have none, so annual prices in those currencies come out 100 times too high. The repo requires toMinorUnits.",
+      "keywords": [
+        "tominorunits",
+        "minor unit",
+        "jpy",
+        "krw",
+        "yen",
+        "won",
+        "zero-decimal",
+        "zero decimal",
+        "decimal place",
+        "no cents",
+        "no minor",
+        "bhd",
+        "kwd"
+      ],
+      "line": 23
+    }
+  },
+  {
+    "id": "pr15-billable-project-count",
+    "title": "Count billable projects for per-project pricing",
+    "planted_bug": {
+      "category": "ignores soft-deleted rows (repo rule)",
+      "visibility": "repo-rule",
+      "file": "src/services/usage.ts",
+      "marker": "SELECT count(*)::int AS n FROM projects WHERE org_id = $1",
+      "summary": "The count includes archived (soft-deleted) projects, so organizations are billed for projects they archived.",
+      "keywords": [
+        "archived",
+        "archive",
+        "soft-delete",
+        "soft delete",
+        "soft-deleted",
+        "deleted project",
+        "inactive project"
+      ],
+      "line": 19
+    }
+  }
+]

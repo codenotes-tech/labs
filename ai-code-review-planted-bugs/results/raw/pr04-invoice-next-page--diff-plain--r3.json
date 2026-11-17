@@ -1,0 +1,90 @@
+{
+  "pr": "pr04-invoice-next-page",
+  "condition": "diff-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:19:27.353Z",
+  "duration_ms": 10712,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.015686000000000002,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1678,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 897,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 1678,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 897,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 1678,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1678
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 25,
+      "severity": "blocking",
+      "title": "slice(1, limit + 1) drops the first (newest) row of every page",
+      "explanation": "rows.slice(1, limit + 1) starts at index 1, so the first invoice of every page is silently omitted and the page contains only limit - 1 items. Because ordering is id DESC, the newest invoice on each page is lost and never returned by any later page, since the cursor moves past it. Use rows.slice(0, limit) instead."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 26,
+      "severity": "blocking",
+      "title": "Cursor computed from the wrong page and can break after the slice fix",
+      "explanation": "next_before uses page[page.length - 1].id. With the current slice(1, ...) bug this is row index limit, which is the extra probe row, so the cursor would skip it as well (id < cursor excludes it, so that row is lost too). After fixing the slice to slice(0, limit), the last element of page is the correct cursor (the last row actually returned). Keep it that way and make sure the probe row is never used as the cursor."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 22,
+      "severity": "non-blocking",
+      "title": "limit + 1 bypasses any upper bound on limit",
+      "explanation": "If limit is validated or clamped elsewhere (e.g. max 100), the query now fetches max + 1 rows, which is fine, but if the clamp is applied in the SQL or the validation allows limit equal to the maximum, confirm the extra row does not violate DB or performance expectations. Also verify limit is a validated positive integer; limit = 0 would make page empty and page[page.length - 1] undefined (hasMore true with 1 row) and throw a TypeError. Guard against limit < 1."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 26,
+      "severity": "non-blocking",
+      "title": "No tests for pagination boundaries",
+      "explanation": "This bug class (off-by-one at page edges) is exactly what tests catch. Add tests for: fewer than limit rows, exactly limit rows (next_before null), limit + 1 rows (next_before set to last returned id), empty result, and walking all pages to verify no invoice is skipped or duplicated."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 22,
+      "severity": "nit",
+      "title": "Name the fetch size and probe row for clarity",
+      "explanation": "Consider a comment or a named constant (e.g. const fetchSize = limit + 1) explaining that the extra row is only used to detect another page, which makes the intent and the slice(0, limit) easier to read."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/invoices.ts\", \"line\": 25, \"severity\": \"blocking\", \"title\": \"slice(1, limit + 1) drops the first (newest) row of every page\", \"explanation\": \"rows.slice(1, limit + 1) starts at index 1, so the first invoice of every page is silently omitted and the page contains only limit - 1 items. Because ordering is id DESC, the newest invoice on each page is lost and never returned by any later page, since the cursor moves past it. Use rows.slice(0, limit) instead.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 26, \"severity\": \"blocking\", \"title\": \"Cursor computed from the wrong page and can break after the slice fix\", \"explanation\": \"next_before uses page[page.length - 1].id. With the current slice(1, ...) bug this is row index limit, which is the extra probe row, so the cursor would skip it as well (id < cursor excludes it, so that row is lost too). After fixing the slice to slice(0, limit), the last element of page is the correct cursor (the last row actually returned). Keep it that way and make sure the probe row is never used as the cursor.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 22, \"severity\": \"non-blocking\", \"title\": \"limit + 1 bypasses any upper bound on limit\", \"explanation\": \"If limit is validated or clamped elsewhere (e.g. max 100), the query now fetches max + 1 rows, which is fine, but if the clamp is applied in the SQL or the validation allows limit equal to the maximum, confirm the extra row does not violate DB or performance expectations. Also verify limit is a validated positive integer; limit = 0 would make page empty and page[page.length - 1] undefined (hasMore true with 1 row) and throw a TypeError. Guard against limit < 1.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 26, \"severity\": \"non-blocking\", \"title\": \"No tests for pagination boundaries\", \"explanation\": \"This bug class (off-by-one at page edges) is exactly what tests catch. Add tests for: fewer than limit rows, exactly limit rows (next_before null), limit + 1 rows (next_before set to last returned id), empty result, and walking all pages to verify no invoice is skipped or duplicated.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 22, \"severity\": \"nit\", \"title\": \"Name the fetch size and probe row for clarity\", \"explanation\": \"Consider a comment or a named constant (e.g. const fetchSize = limit + 1) explaining that the extra row is only used to detect another page, which makes the intent and the slice(0, limit) easier to read.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Fix next_before when the last page is exactly full\n\nWhen the last page had exactly `limit` invoices, `next_before` was still set, so the web app made one extra request that came back empty. This fetches `limit + 1` rows to know whether another page exists.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex b9edb19..8e99e4e 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -19,11 +19,13 @@ invoicesRouter.get('/', async (req, res) => {\n       WHERE org_id = $1 AND ($2::bigint IS NULL OR id < $2)\n       ORDER BY id DESC\n       LIMIT $3`,\n-    [req.user.orgId, before ?? null, limit],\n+    [req.user.orgId, before ?? null, limit + 1],\n   )\n+  const hasMore = rows.length > limit\n+  const page = rows.slice(1, limit + 1)\n   res.json({\n-    invoices: rows.map(serializeInvoice),\n-    next_before: rows.length === limit ? rows[rows.length - 1].id : null,\n+    invoices: page.map(serializeInvoice),\n+    next_before: hasMore ? page[page.length - 1].id : null,\n   })\n })\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

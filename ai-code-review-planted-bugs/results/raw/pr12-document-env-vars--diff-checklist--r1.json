@@ -1,0 +1,54 @@
+{
+  "pr": "pr12-document-env-vars",
+  "condition": "diff-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:23:29.182Z",
+  "duration_ms": 6793,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0053862,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 660,
+    "cache_read_input_tokens": 1022,
+    "output_tokens": 264,
+    "output_tokens_details": {
+      "thinking_tokens": 255
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 660,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 264,
+        "cache_read_input_tokens": 1022,
+        "cache_creation_input_tokens": 660,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 660
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [],
+  "result_text": "{\"findings\": []}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Document environment variables\n\nLists the environment variables the API reads, with their defaults.\n\n## Diff\n\n```diff\ndiff --git a/README.md b/README.md\nindex c454bb1..9513c3f 100644\n--- a/README.md\n+++ b/README.md\n@@ -9,6 +9,15 @@ Billing API for Acme's project management product: organizations, projects, invo\n \n Deploys are rolling: old and new versions of the API serve traffic together during a release.\n \n+## Configuration\n+\n+| Variable | Required | Default | Used by |\n+| --- | --- | --- | --- |\n+| `DATABASE_URL` | yes | none | `src/db.ts` |\n+| `PORT` | no | `3000` | `src/server.ts` |\n+| `PAYMENT_PROVIDER_URL` | no | `https://api.payments.example` | `src/lib/provider.ts` |\n+| `PAYMENT_PROVIDER_KEY` | yes | none | `src/lib/provider.ts` |\n+\n ## Running locally\n \n ```bash\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

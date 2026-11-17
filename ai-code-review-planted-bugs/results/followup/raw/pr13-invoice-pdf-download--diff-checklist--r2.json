@@ -1,0 +1,118 @@
+{
+  "pr": "pr13-invoice-pdf-download",
+  "condition": "diff-checklist",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:36:45.614Z",
+  "duration_ms": 31275,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.039284599999999996,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 666,
+    "cache_read_input_tokens": 1466,
+    "output_tokens": 3647,
+    "output_tokens_details": {
+      "thinking_tokens": 1933
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 666,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 3647,
+        "cache_read_input_tokens": 1466,
+        "cache_creation_input_tokens": 666,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 666
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 52,
+      "severity": "non-blocking",
+      "title": "Amount formatting assumes every currency has 2 decimal places",
+      "explanation": "`Number(invoice.amount) / 100` and `toFixed(2)` are wrong for zero-decimal currencies such as JPY and for three-decimal currencies such as KWD. This is a document for accounting teams, so a wrong amount is a real defect. Reuse the formatting helper that `serializeInvoice` or the rest of the app uses, or use `Intl.NumberFormat` with the currency's minor-unit exponent. Also confirm that `amount` is an integer minor-unit column, and that it cannot exceed safe-integer range if it is a bigint."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 56,
+      "severity": "non-blocking",
+      "title": "Date formatting through toISOString can shift the day",
+      "explanation": "If `period_start` and `period_end` are `DATE` columns, node-pg parses them as local-midnight `Date` objects. `toISOString()` converts to UTC, so on a server whose timezone is ahead of UTC the printed date is one day early. If the columns are `timestamptz`, the UTC date may differ from the customer's billing date. Either cast in SQL (`to_char(i.period_start, 'YYYY-MM-DD')` or `i.period_start::text`) or configure the pg date parser to return strings. Also decide whether `period_end` is inclusive or exclusive, since the printed range says 'to'. Nullable columns would throw on `.toISOString()`."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 57,
+      "severity": "non-blocking",
+      "title": "'Amount due' is misleading for paid or void invoices",
+      "explanation": "The label is hard-coded, so a paid, void or refunded invoice still says 'Amount due: X'. An accounting team could read that as an outstanding balance. Use 'Amount' or 'Total', or vary the label by status."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 58,
+      "severity": "nit",
+      "title": "Status and currency are interpolated into HTML without escaping",
+      "explanation": "`org_name` is escaped but `invoice.status` and `invoice.currency` are not. They are probably constrained values today, so this is not exploitable now. If either column ever becomes free-form, or an enum gains an unexpected value, it becomes stored XSS. Escape every interpolated value (`escapeHtml(String(...))`) so the template is safe by construction."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 48,
+      "severity": "non-blocking",
+      "title": "Non-numeric or non-integer invoiceId causes a DB error instead of a 404",
+      "explanation": "`Number('abc')` is `NaN` and `Number('1.5')` is 1.5. Either is sent to an integer column and Postgres raises `invalid input syntax`, which surfaces as a 500. Validate with `Number.isInteger(id) && id > 0` and return 404 or 400. Very large values can also overflow int4. Ideally share one param-parsing helper with the existing `/:invoiceId` route."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 43,
+      "severity": "non-blocking",
+      "title": "Async handler has no error handling",
+      "explanation": "If this repo runs Express 4, a rejected `pool.query` in an async handler is not passed to the error middleware. The result is an unhandled rejection and a request that hangs. Wrap the handler in try/catch, or use the project's async wrapper if the existing routes have one."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 53,
+      "severity": "nit",
+      "title": "Missing response headers for a sensitive printable document",
+      "explanation": "Consider `Cache-Control: private, no-store` so shared proxies and browsers do not cache financial data. Consider `X-Content-Type-Options: nosniff` and a restrictive CSP (`default-src 'none'; style-src 'unsafe-inline'`) as defense in depth for an HTML response built from DB data. If the intent is 'download', consider `Content-Disposition`, or at least add print-friendly markup (`<html>`, `<meta charset>`, `<title>`, basic print CSS)."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 43,
+      "severity": "nit",
+      "title": "Confirm auth and role checks match the other invoice routes",
+      "explanation": "The org scoping (`i.org_id = $2` from `req.user.orgId`) is correct and the query is parameterized. I could not see the router setup. Confirm that auth middleware applies at the router level, so `req.user` is never undefined here, and that any billing-role or permission check on the existing invoice routes also covers this one."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 60,
+      "severity": "nit",
+      "title": "Duplicated helper and missing tests",
+      "explanation": "`escapeHtml` is defined locally, so check whether a shared utility or templating library already exists. The PR adds no tests. Add at least cases for a cross-org invoice returning 404, a nonexistent id, HTML escaping of the org name, and date and amount formatting."
+    }
+  ],
+  "result_text": "{\"findings\":[{\"file\":\"src/routes/invoices.ts\",\"line\":52,\"severity\":\"non-blocking\",\"title\":\"Amount formatting assumes every currency has 2 decimal places\",\"explanation\":\"`Number(invoice.amount) / 100` and `toFixed(2)` are wrong for zero-decimal currencies such as JPY and for three-decimal currencies such as KWD. This is a document for accounting teams, so a wrong amount is a real defect. Reuse the formatting helper that `serializeInvoice` or the rest of the app uses, or use `Intl.NumberFormat` with the currency's minor-unit exponent. Also confirm that `amount` is an integer minor-unit column, and that it cannot exceed safe-integer range if it is a bigint.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":56,\"severity\":\"non-blocking\",\"title\":\"Date formatting through toISOString can shift the day\",\"explanation\":\"If `period_start` and `period_end` are `DATE` columns, node-pg parses them as local-midnight `Date` objects. `toISOString()` converts to UTC, so on a server whose timezone is ahead of UTC the printed date is one day early. If the columns are `timestamptz`, the UTC date may differ from the customer's billing date. Either cast in SQL (`to_char(i.period_start, 'YYYY-MM-DD')` or `i.period_start::text`) or configure the pg date parser to return strings. Also decide whether `period_end` is inclusive or exclusive, since the printed range says 'to'. Nullable columns would throw on `.toISOString()`.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":57,\"severity\":\"non-blocking\",\"title\":\"'Amount due' is misleading for paid or void invoices\",\"explanation\":\"The label is hard-coded, so a paid, void or refunded invoice still says 'Amount due: X'. An accounting team could read that as an outstanding balance. Use 'Amount' or 'Total', or vary the label by status.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":58,\"severity\":\"nit\",\"title\":\"Status and currency are interpolated into HTML without escaping\",\"explanation\":\"`org_name` is escaped but `invoice.status` and `invoice.currency` are not. They are probably constrained values today, so this is not exploitable now. If either column ever becomes free-form, or an enum gains an unexpected value, it becomes stored XSS. Escape every interpolated value (`escapeHtml(String(...))`) so the template is safe by construction.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":48,\"severity\":\"non-blocking\",\"title\":\"Non-numeric or non-integer invoiceId causes a DB error instead of a 404\",\"explanation\":\"`Number('abc')` is `NaN` and `Number('1.5')` is 1.5. Either is sent to an integer column and Postgres raises `invalid input syntax`, which surfaces as a 500. Validate with `Number.isInteger(id) && id > 0` and return 404 or 400. Very large values can also overflow int4. Ideally share one param-parsing helper with the existing `/:invoiceId` route.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":43,\"severity\":\"non-blocking\",\"title\":\"Async handler has no error handling\",\"explanation\":\"If this repo runs Express 4, a rejected `pool.query` in an async handler is not passed to the error middleware. The result is an unhandled rejection and a request that hangs. Wrap the handler in try/catch, or use the project's async wrapper if the existing routes have one.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":53,\"severity\":\"nit\",\"title\":\"Missing response headers for a sensitive printable document\",\"explanation\":\"Consider `Cache-Control: private, no-store` so shared proxies and browsers do not cache financial data. Consider `X-Content-Type-Options: nosniff` and a restrictive CSP (`default-src 'none'; style-src 'unsafe-inline'`) as defense in depth for an HTML response built from DB data. If the intent is 'download', consider `Content-Disposition`, or at least add print-friendly markup (`<html>`, `<meta charset>`, `<title>`, basic print CSS).\"},{\"file\":\"src/routes/invoices.ts\",\"line\":43,\"severity\":\"nit\",\"title\":\"Confirm auth and role checks match the other invoice routes\",\"explanation\":\"The org scoping (`i.org_id = $2` from `req.user.orgId`) is correct and the query is parameterized. I could not see the router setup. Confirm that auth middleware applies at the router level, so `req.user` is never undefined here, and that any billing-role or permission check on the existing invoice routes also covers this one.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":60,\"severity\":\"nit\",\"title\":\"Duplicated helper and missing tests\",\"explanation\":\"`escapeHtml` is defined locally, so check whether a shared utility or templating library already exists. The PR adds no tests. Add at least cases for a cross-org invoice returning 404, a nonexistent id, HTML escaping of the org name, and date and amount formatting.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add printable invoice download\n\nCustomers want a printable copy of an invoice for their accounting team. Adds `GET /invoices/:invoiceId/print`, which returns a simple HTML invoice. Scoped to the caller's organization like the other invoice routes.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex 938fffd..04598f2 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -39,3 +39,25 @@ invoicesRouter.get('/:invoiceId', async (req, res) => {\n   if (!rows[0]) return res.status(404).json({ error: 'not_found' })\n   res.json(serializeInvoice(rows[0]))\n })\n+\n+invoicesRouter.get('/:invoiceId/print', async (req, res) => {\n+  const { rows } = await pool.query(\n+    `SELECT i.id, i.amount, i.currency, i.status, i.period_start, i.period_end, o.name AS org_name\n+       FROM invoices i JOIN organizations o ON o.id = i.org_id\n+      WHERE i.id = $1 AND i.org_id = $2`,\n+    [Number(req.params.invoiceId), req.user.orgId],\n+  )\n+  const invoice = rows[0]\n+  if (!invoice) return res.status(404).json({ error: 'not_found' })\n+  const amount = (Number(invoice.amount) / 100).toFixed(2)\n+  res.type('html').send(`<!doctype html>\n+<h1>Invoice #${invoice.id}</h1>\n+<p>${escapeHtml(invoice.org_name)}</p>\n+<p>Period: ${invoice.period_start.toISOString().slice(0, 10)} to ${invoice.period_end.toISOString().slice(0, 10)}</p>\n+<p>Amount due: ${amount} ${invoice.currency.toUpperCase()}</p>\n+<p>Status: ${invoice.status}</p>`)\n+})\n+\n+function escapeHtml(value: string): string {\n+  return value.replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c] as string)\n+}\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

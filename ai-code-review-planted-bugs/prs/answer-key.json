@@ -1,0 +1,260 @@
+[
+  {
+    "id": "pr01-project-events-csv",
+    "title": "Add CSV export for project events",
+    "planted_bug": {
+      "category": "missing authorization check",
+      "visibility": "context",
+      "file": "src/routes/projects.ts",
+      "marker": "projectsRouter.get('/:projectId/events.csv'",
+      "summary": "The new route never calls assertProjectAccess, so any signed-in user of any organization can export any project by id.",
+      "keywords": [
+        "authoriz",
+        "assertprojectaccess",
+        "access check",
+        "access control",
+        "permission",
+        "idor",
+        "any authenticated",
+        "any signed-in",
+        "any logged-in",
+        "any user",
+        "other organization",
+        "another organization",
+        "other org",
+        "another org",
+        "other tenant",
+        "ownership",
+        "cross-tenant",
+        "tenant"
+      ],
+      "line": 53
+    }
+  },
+  {
+    "id": "pr02-coupon-error-messages",
+    "title": "Return specific errors when a coupon can't be redeemed",
+    "planted_bug": {
+      "category": "race condition",
+      "visibility": "diff",
+      "file": "src/routes/coupons.ts",
+      "marker": "await client.query('UPDATE coupons SET redemptions = redemptions + 1 WHERE code = $1', [code])",
+      "summary": "Read-check-write: two concurrent redemptions both read redemptions < max under READ COMMITTED and both increment, so a coupon can be redeemed more times than max_redemptions.",
+      "keywords": [
+        "race",
+        "concurren",
+        "atomic",
+        "for update",
+        "row lock",
+        "lock the row",
+        "locking",
+        "simultaneous",
+        "parallel",
+        "exceed",
+        "oversubscri",
+        "toctou",
+        "check-then",
+        "same time",
+        "read committed",
+        "over-redeem",
+        "more than max"
+      ],
+      "line": 20
+    }
+  },
+  {
+    "id": "pr03-events-project-index",
+    "title": "Speed up the project activity feed",
+    "planted_bug": {
+      "category": "unsafe migration",
+      "visibility": "context",
+      "file": "migrations/005_events_project_idx.sql",
+      "marker": "CREATE INDEX events_project_id_idx",
+      "summary": "A plain CREATE INDEX on the 400-million-row events table blocks writes for the whole build; the conventions require CREATE INDEX CONCURRENTLY in a no-transaction migration.",
+      "keywords": [
+        "concurrently",
+        "lock",
+        "block write",
+        "blocks write",
+        "blocking write",
+        "downtime",
+        "large table",
+        "exclusive",
+        "share lock",
+        "no-transaction"
+      ],
+      "line": 1
+    }
+  },
+  {
+    "id": "pr04-invoice-next-page",
+    "title": "Fix next_before when the last page is exactly full",
+    "planted_bug": {
+      "category": "off-by-one",
+      "visibility": "diff",
+      "file": "src/routes/invoices.ts",
+      "marker": "const page = rows.slice(1, limit + 1)",
+      "summary": "slice(1, limit + 1) drops the first (newest) row of every page; it should be slice(0, limit).",
+      "keywords": [
+        "slice",
+        "off-by-one",
+        "off by one",
+        "skip",
+        "drop",
+        "first invoice",
+        "first row",
+        "first item",
+        "first element",
+        "first result",
+        "index 0",
+        "newest invoice",
+        "omit"
+      ],
+      "line": 25
+    }
+  },
+  {
+    "id": "pr05-retry-provider-calls",
+    "title": "Retry payment provider calls on transient errors",
+    "planted_bug": {
+      "category": "retry of a non-idempotent side effect",
+      "visibility": "context",
+      "file": "src/routes/payments.ts",
+      "marker": "const charge = await withRetry(() =>",
+      "summary": "A timeout after the provider has already charged is retried without an idempotency key, so customers can be charged twice; the conventions forbid withRetry around charges without an idempotency key.",
+      "keywords": [
+        "idempoten",
+        "double charge",
+        "double-charge",
+        "duplicate charge",
+        "charged twice",
+        "charge twice",
+        "charging twice",
+        "duplicate payment",
+        "multiple charges",
+        "charged multiple",
+        "charged more than once"
+      ],
+      "line": 23
+    }
+  },
+  {
+    "id": "pr06-amount-cents-field",
+    "title": "Rename invoice amount to amount_cents",
+    "planted_bug": {
+      "category": "breaking API contract change",
+      "visibility": "context",
+      "file": "src/serializers/invoice.ts",
+      "marker": "amount_cents: Number(row.amount),",
+      "summary": "Removing `amount` from the response breaks the web client (web/src/api/invoices.ts, InvoiceRow) and the mobile apps; the conventions require a new API version for renames.",
+      "keywords": [
+        "breaking",
+        "break",
+        "client",
+        "consumer",
+        "web/",
+        "invoicerow",
+        "backward",
+        "compatib",
+        "api version",
+        "versioning",
+        "mobile",
+        "contract",
+        "frontend",
+        "front-end"
+      ],
+      "line": 14
+    }
+  },
+  {
+    "id": "pr07-log-signup-payloads",
+    "title": "Log signup payloads to debug failed signups",
+    "planted_bug": {
+      "category": "sensitive data in logs",
+      "visibility": "diff",
+      "file": "src/routes/auth.ts",
+      "marker": "logger.info('signup attempt', { body: req.body })",
+      "summary": "The signup body contains the plaintext password, and the logger redacts only `authorization` and `token`.",
+      "keywords": [
+        "password",
+        "plaintext",
+        "plain text",
+        "sensitive",
+        "pii",
+        "credential",
+        "secret"
+      ],
+      "line": 17
+    }
+  },
+  {
+    "id": "pr08-billing-period-simplify",
+    "title": "Simplify next billing period calculation",
+    "planted_bug": {
+      "category": "date overflow at month end",
+      "visibility": "diff",
+      "file": "src/services/billing.ts",
+      "marker": "end.setUTCMonth(end.getUTCMonth() + 1)",
+      "summary": "setUTCMonth overflows: a period starting on Jan 31 ends on Mar 3 (Mar 2 in leap years) instead of Feb 28/29; the existing test \"clamps to the end of a shorter month\" fails.",
+      "keywords": [
+        "overflow",
+        "31",
+        "end of month",
+        "end-of-month",
+        "shorter month",
+        "february",
+        "feb ",
+        "march",
+        "mar ",
+        "rollover",
+        "roll over",
+        "clamp",
+        "skip",
+        "days in",
+        "last day",
+        "month boundar"
+      ],
+      "line": 6
+    }
+  },
+  {
+    "id": "pr09-invoice-sorting",
+    "title": "Let the web app sort invoices",
+    "planted_bug": {
+      "category": "SQL injection",
+      "visibility": "diff",
+      "file": "src/routes/invoices.ts",
+      "marker": "const orderBy = sort ? `${sort} DESC, id DESC` : 'id DESC'",
+      "summary": "The user-supplied sort value is interpolated into ORDER BY, which allows SQL injection.",
+      "keywords": [
+        "injection",
+        "inject",
+        "interpolat",
+        "unsanitized",
+        "unsanitised",
+        "unvalidated",
+        "whitelist",
+        "allowlist",
+        "allow-list",
+        "allow list",
+        "arbitrary sql"
+      ],
+      "line": 17
+    }
+  },
+  {
+    "id": "pr10-shared-money-format",
+    "title": "Share money formatting in the web app",
+    "planted_bug": null
+  },
+  {
+    "id": "pr11-proration-tests",
+    "title": "Add edge-case tests for proration",
+    "planted_bug": null
+  },
+  {
+    "id": "pr12-document-env-vars",
+    "title": "Document environment variables",
+    "planted_bug": null
+  }
+]

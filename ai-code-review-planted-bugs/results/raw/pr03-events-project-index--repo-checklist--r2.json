@@ -1,0 +1,114 @@
+{
+  "pr": "pr03-events-project-index",
+  "condition": "repo-checklist",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:25:18.302Z",
+  "duration_ms": 16249,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 5,
+  "cost_usd": 0.034409300000000004,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 5000,
+    "cache_read_input_tokens": 14873,
+    "output_tokens": 1291,
+    "output_tokens_details": {
+      "thinking_tokens": 40
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 5000,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 870,
+        "cache_read_input_tokens": 7112,
+        "cache_creation_input_tokens": 1439,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1439
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Glob",
+      "input": {
+        "pattern": "**/*"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "events",
+        "output_mode": "content",
+        "glob": "!.git/**",
+        "head_limit": 60
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-Y6t7IO/src/routes/projects.ts"
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-Y6t7IO/migrations/004_events.sql"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-Y6t7IO/src/routes/projects.ts",
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-Y6t7IO/migrations/004_events.sql"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "blocking",
+      "title": "Index is built without CONCURRENTLY on a ~400M-row table",
+      "explanation": "A plain CREATE INDEX takes a SHARE lock on `events`. That blocks all INSERT, UPDATE and DELETE on the table for the whole build, which on 400M rows could take many minutes. Event writes would stall or time out during the migration, and any rolling deploy running at the same time would be affected too. docs/CONVENTIONS.md requires `CREATE INDEX CONCURRENTLY` for this table. Change the statement to `CREATE INDEX CONCURRENTLY events_project_id_idx ON events (project_id, id DESC);`."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "blocking",
+      "title": "Missing `-- migrate:no-transaction` header",
+      "explanation": "CREATE INDEX CONCURRENTLY cannot run inside a transaction block. Conventions require the migration file to start with `-- migrate:no-transaction`, as 004_events.sql does. Without the header, the migration runner will wrap the file in a transaction. Once CONCURRENTLY is added, the migration will fail. Add the header as the first line."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "nit",
+      "title": "Use IF NOT EXISTS, and note that a failed concurrent build leaves an INVALID index",
+      "explanation": "If a concurrent build fails or is cancelled, it leaves an INVALID index with the same name, and a retry then fails with 'already exists'. Consider `CREATE INDEX CONCURRENTLY IF NOT EXISTS ...`, and note in the PR that an invalid index must be dropped before re-running. Also consider the extra write cost and disk usage of another index on a table this large."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 30,
+      "severity": "nit",
+      "title": "Events query depends on an unvalidated projectId",
+      "explanation": "`Number(req.params.projectId)` can be NaN for non-numeric input. This is not a problem introduced by this PR, but it means the new index is only useful when the id is valid. `assertProjectAccess` is called first, so tenant isolation looks fine here. Consider validating the id with zod and returning a 400. The endpoint also has no cursor pagination (fixed LIMIT 100), which is acceptable now but could use `id < $cursor`, which the new index would support."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"blocking\", \"title\": \"Index is built without CONCURRENTLY on a ~400M-row table\", \"explanation\": \"A plain CREATE INDEX takes a SHARE lock on `events`. That blocks all INSERT, UPDATE and DELETE on the table for the whole build, which on 400M rows could take many minutes. Event writes would stall or time out during the migration, and any rolling deploy running at the same time would be affected too. docs/CONVENTIONS.md requires `CREATE INDEX CONCURRENTLY` for this table. Change the statement to `CREATE INDEX CONCURRENTLY events_project_id_idx ON events (project_id, id DESC);`.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"blocking\", \"title\": \"Missing `-- migrate:no-transaction` header\", \"explanation\": \"CREATE INDEX CONCURRENTLY cannot run inside a transaction block. Conventions require the migration file to start with `-- migrate:no-transaction`, as 004_events.sql does. Without the header, the migration runner will wrap the file in a transaction. Once CONCURRENTLY is added, the migration will fail. Add the header as the first line.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"nit\", \"title\": \"Use IF NOT EXISTS, and note that a failed concurrent build leaves an INVALID index\", \"explanation\": \"If a concurrent build fails or is cancelled, it leaves an INVALID index with the same name, and a retry then fails with 'already exists'. Consider `CREATE INDEX CONCURRENTLY IF NOT EXISTS ...`, and note in the PR that an invalid index must be dropped before re-running. Also consider the extra write cost and disk usage of another index on a table this large.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 30, \"severity\": \"nit\", \"title\": \"Events query depends on an unvalidated projectId\", \"explanation\": \"`Number(req.params.projectId)` can be NaN for non-numeric input. This is not a problem introduced by this PR, but it means the new index is only useful when the id is valid. `assertProjectAccess` is called first, so tenant isolation looks fine here. Consider validating the id with zod and returning a 400. The endpoint also has no cursor pagination (fixed LIMIT 100), which is acceptable now but could use `id < $cursor`, which the new index would support.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Speed up the project activity feed\n\nThe project events endpoint does a sequential scan per project. Adds an index on `events (project_id, id DESC)` to match the query.\n\n## Diff\n\n```diff\ndiff --git a/migrations/005_events_project_idx.sql b/migrations/005_events_project_idx.sql\nnew file mode 100644\nindex 0000000..0586576\n--- /dev/null\n+++ b/migrations/005_events_project_idx.sql\n@@ -0,0 +1 @@\n+CREATE INDEX events_project_id_idx ON events (project_id, id DESC);\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

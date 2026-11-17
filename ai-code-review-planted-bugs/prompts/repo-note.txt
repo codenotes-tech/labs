@@ -1,0 +1,2 @@
+
+The repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.

@@ -1,0 +1,83 @@
+{
+  "pr": "pr15-billable-project-count",
+  "condition": "diff-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:36:13.312Z",
+  "duration_ms": 12574,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0130726,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 663,
+    "cache_read_input_tokens": 866,
+    "output_tokens": 1033,
+    "output_tokens_details": {
+      "thinking_tokens": 371
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 663,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1033,
+        "cache_read_input_tokens": 866,
+        "cache_creation_input_tokens": 663,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 663
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/services/usage.ts",
+      "line": 19,
+      "severity": "blocking",
+      "title": "Count likely includes archived/deleted projects, so customers could be overbilled",
+      "explanation": "The query counts every row in `projects` for the org. The neighboring `activeProjectNames` function suggests the table has an active/inactive distinction (archived, deleted, or status), and its query presumably filters on it. This one does not, so archived or soft-deleted projects would be billed under the new per-project pricing. Decide what 'billable' means with product/billing and apply the same filter (e.g. `AND archived_at IS NULL` or `status = 'active'`). Ideally share one predicate or constant with `activeProjectNames` so the two cannot drift apart."
+    },
+    {
+      "file": "src/services/usage.ts",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "No tests for billing-critical logic",
+      "explanation": "This number drives invoices. Add tests covering an org with no projects, active projects, archived/deleted projects, and projects belonging to other orgs, so that the billable definition is pinned down and regressions are caught."
+    },
+    {
+      "file": "src/services/usage.ts",
+      "line": 17,
+      "severity": "non-blocking",
+      "title": "Comment does not define 'billable'",
+      "explanation": "'One billable unit per project' does not say which projects count (active only? trial or free projects? projects created mid-billing-period?). Document the rule. Also consider whether the invoice generator needs a count as of a point in time (billing period) rather than the current count. A live count can change between calculation and invoicing, and it ignores projects that were created or removed during the period."
+    },
+    {
+      "file": "src/services/usage.ts",
+      "line": 19,
+      "severity": "nit",
+      "title": "Query formatting inconsistent with existing function",
+      "explanation": "The existing query is formatted across multiple lines, while this one is a long single line. Consider matching the existing style for readability, and adding an index on `projects(org_id)` if one does not already exist."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/services/usage.ts\", \"line\": 19, \"severity\": \"blocking\", \"title\": \"Count likely includes archived/deleted projects, so customers could be overbilled\", \"explanation\": \"The query counts every row in `projects` for the org. The neighboring `activeProjectNames` function suggests the table has an active/inactive distinction (archived, deleted, or status), and its query presumably filters on it. This one does not, so archived or soft-deleted projects would be billed under the new per-project pricing. Decide what 'billable' means with product/billing and apply the same filter (e.g. `AND archived_at IS NULL` or `status = 'active'`). Ideally share one predicate or constant with `activeProjectNames` so the two cannot drift apart.\"}, {\"file\": \"src/services/usage.ts\", \"line\": 18, \"severity\": \"non-blocking\", \"title\": \"No tests for billing-critical logic\", \"explanation\": \"This number drives invoices. Add tests covering an org with no projects, active projects, archived/deleted projects, and projects belonging to other orgs, so that the billable definition is pinned down and regressions are caught.\"}, {\"file\": \"src/services/usage.ts\", \"line\": 17, \"severity\": \"non-blocking\", \"title\": \"Comment does not define 'billable'\", \"explanation\": \"'One billable unit per project' does not say which projects count (active only? trial or free projects? projects created mid-billing-period?). Document the rule. Also consider whether the invoice generator needs a count as of a point in time (billing period) rather than the current count. A live count can change between calculation and invoicing, and it ignores projects that were created or removed during the period.\"}, {\"file\": \"src/services/usage.ts\", \"line\": 19, \"severity\": \"nit\", \"title\": \"Query formatting inconsistent with existing function\", \"explanation\": \"The existing query is formatted across multiple lines, while this one is a long single line. Consider matching the existing style for readability, and adding an index on `projects(org_id)` if one does not already exist.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Count billable projects for per-project pricing\n\nThe Business plan moves to per-project pricing next month. Adds `billableProjectCount`, which the invoice generator will use to price each organization.\n\n## Diff\n\n```diff\ndiff --git a/src/services/usage.ts b/src/services/usage.ts\nindex 1d52088..3ab979d 100644\n--- a/src/services/usage.ts\n+++ b/src/services/usage.ts\n@@ -13,3 +13,9 @@ export async function activeProjectNames(orgId: number): Promise<string[]> {\n   )\n   return rows.map((r) => r.name)\n }\n+\n+// Business plan: one billable unit per project.\n+export async function billableProjectCount(orgId: number): Promise<number> {\n+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM projects WHERE org_id = $1', [orgId])\n+  return rows[0].n\n+}\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

@@ -1,0 +1,17 @@
+Review this pull request.
+
+## {{title}}
+
+{{description}}
+
+## Diff
+
+```diff
+{{patch}}
+```
+{{repo_note}}{{checklist}}
+Report every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:
+
+{"findings": [{"file": "path/to/file", "line": <line number in the new version, or null>, "severity": "blocking" | "non-blocking" | "nit", "title": "<short summary>", "explanation": "<why it matters and what to change>"}]}
+
+Use an empty findings list if you would approve the pull request as it is. Write the review in English.

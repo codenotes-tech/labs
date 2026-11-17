@@ -1,0 +1,108 @@
+{
+  "pr": "pr14-annual-plan-pricing",
+  "condition": "repo-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:34:43.881Z",
+  "duration_ms": 14654,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.0247439,
+  "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 2827,
+    "cache_read_input_tokens": 17099,
+    "output_tokens": 1171,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2827,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 773,
+        "cache_read_input_tokens": 5166,
+        "cache_creation_input_tokens": 439,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 439
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-x2IZSa/src/services/pricing.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "toMinorUnits",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-x2IZSa/src/lib/money.ts",
+        "output_mode": "content",
+        "-A": 15
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-x2IZSa/src/lib/money.ts"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-x2IZSa/src/services/pricing.ts",
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-x2IZSa/src/lib/money.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/services/pricing.ts",
+      "line": 23,
+      "severity": "blocking",
+      "title": "Hardcoded `* 100` overcharges JPY and KRW by 100x",
+      "explanation": "PLANS includes jpy and krw, which have zero minor-unit digits. Multiplying by 100 makes the annual price 100 times too high for those currencies. For example, team JPY with 1 seat gives 1800*12*0.9 = 19440 yen, but the function returns 1944000. src/lib/money.ts says to never multiply or divide by 100 and to use the helpers. Compute the major-unit total and then call `toMinorUnits(monthly * 12 * 0.9, currency)`. This is the same conversion `monthlyPriceMinor` already uses."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 23,
+      "severity": "non-blocking",
+      "title": "Floating-point discount, and the discount logic is duplicated",
+      "explanation": "`monthly * 12 * 0.9 * 100` does float arithmetic before rounding, so half-cent cases can round the wrong way. Prefer integer math: take `monthlyPriceMinor(...)` and compute `Math.round(monthlyMinor * 108 / 10)`, or define the discount as a named constant. Building on `monthlyPriceMinor` also keeps the checkout and invoice calculations consistent, which is the PR's stated aim. Decide the rounding rule explicitly and apply it once to the final total."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 20,
+      "severity": "non-blocking",
+      "title": "No tests for the new pricing function",
+      "explanation": "Billing code that launches next month needs tests. Cover the zero-decimal currencies (jpy, krw), a two-decimal currency, multiple seats, and rounding. A JPY test would have caught the 100x bug."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 21,
+      "severity": "nit",
+      "title": "Magic numbers for months and discount",
+      "explanation": "Extract `12` and `0.9` into named constants such as `ANNUAL_MONTHS` and `ANNUAL_DISCOUNT`. The PR description says '12 months for the price of 10.8', so the constants make the intent clear and give a single place to change it."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/services/pricing.ts\", \"line\": 23, \"severity\": \"blocking\", \"title\": \"Hardcoded `* 100` overcharges JPY and KRW by 100x\", \"explanation\": \"PLANS includes jpy and krw, which have zero minor-unit digits. Multiplying by 100 makes the annual price 100 times too high for those currencies. For example, team JPY with 1 seat gives 1800*12*0.9 = 19440 yen, but the function returns 1944000. src/lib/money.ts says to never multiply or divide by 100 and to use the helpers. Compute the major-unit total and then call `toMinorUnits(monthly * 12 * 0.9, currency)`. This is the same conversion `monthlyPriceMinor` already uses.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 23, \"severity\": \"non-blocking\", \"title\": \"Floating-point discount, and the discount logic is duplicated\", \"explanation\": \"`monthly * 12 * 0.9 * 100` does float arithmetic before rounding, so half-cent cases can round the wrong way. Prefer integer math: take `monthlyPriceMinor(...)` and compute `Math.round(monthlyMinor * 108 / 10)`, or define the discount as a named constant. Building on `monthlyPriceMinor` also keeps the checkout and invoice calculations consistent, which is the PR's stated aim. Decide the rounding rule explicitly and apply it once to the final total.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 20, \"severity\": \"non-blocking\", \"title\": \"No tests for the new pricing function\", \"explanation\": \"Billing code that launches next month needs tests. Cover the zero-decimal currencies (jpy, krw), a two-decimal currency, multiple seats, and rounding. A JPY test would have caught the 100x bug.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 21, \"severity\": \"nit\", \"title\": \"Magic numbers for months and discount\", \"explanation\": \"Extract `12` and `0.9` into named constants such as `ANNUAL_MONTHS` and `ANNUAL_DISCOUNT`. The PR description says '12 months for the price of 10.8', so the constants make the intent clear and give a single place to change it.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add annual plan pricing\n\nAnnual billing launches next month: twelve months for the price of 10.8 (a 10% discount). Adds `annualPriceMinor` next to the monthly price so the checkout page and the invoice generator compute it the same way.\n\n## Diff\n\n```diff\ndiff --git a/src/services/pricing.ts b/src/services/pricing.ts\nindex 142a18d..f738804 100644\n--- a/src/services/pricing.ts\n+++ b/src/services/pricing.ts\n@@ -16,3 +16,9 @@ export function monthlyPriceMinor(plan: Plan, currency: Currency, seats: number)\n export function planLabel(plan: Plan): string {\n   return plan === 'team' ? 'Team' : 'Business'\n }\n+\n+// Annual billing: twelve months with a 10% discount, in minor units for the invoice.\n+export function annualPriceMinor(plan: Plan, currency: Currency, seats: number): number {\n+  const monthly = PLANS[plan].monthly[currency] * seats\n+  return Math.round(monthly * 12 * 0.9 * 100)\n+}\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

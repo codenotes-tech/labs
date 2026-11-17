@@ -1,0 +1,121 @@
+{
+  "pr": "pr01-project-events-csv",
+  "condition": "repo-plain",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:25:42.846Z",
+  "duration_ms": 18607,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 3,
+  "cost_usd": 0.0285122,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 2777,
+    "cache_read_input_tokens": 8262,
+    "output_tokens": 1657,
+    "output_tokens_details": {
+      "thinking_tokens": 29
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2777,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1366,
+        "cache_read_input_tokens": 4460,
+        "cache_creation_input_tokens": 2119,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 2119
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-yYe4pV/src/routes/projects.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "events|projectsRouter|requireAuth|authorize",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-yYe4pV/src",
+        "output_mode": "content"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-yYe4pV/src/routes/projects.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/projects.ts",
+      "line": 54,
+      "severity": "blocking",
+      "title": "Missing authorization check (IDOR) on CSV export",
+      "explanation": "Every other `/:projectId` handler calls `await assertProjectAccess(req.user, projectId)` before querying. This one doesn't. Any authenticated user, including one from another org or a non-member, can download any project's full event log by guessing the ID. Add `await assertProjectAccess(req.user, projectId)` as the first step, the same as the JSON events endpoint. Also add a test that a non-member gets a 403 or 404."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 63,
+      "severity": "blocking",
+      "title": "CSV escaping is wrong: payload is double-JSON-encoded and `kind` is unescaped",
+      "explanation": "`JSON.stringify(JSON.stringify(payload))` produces a JS string literal with backslash escapes, such as `\"{\\\"a\\\":1}\"`. CSV expects embedded quotes to be doubled (`\"\"`), not backslash-escaped, so Excel and most parsers will split or mangle rows. `kind` is written raw, so a comma, quote or newline in it breaks the row structure. Write a proper CSV escape helper, or use a library such as csv-stringify. The helper should wrap each field in quotes and replace `\"` with `\"\"`. Apply it to every string field, with the payload as `JSON.stringify(payload)` passed through it once."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 63,
+      "severity": "non-blocking",
+      "title": "CSV/formula injection",
+      "explanation": "Event kinds and payloads can contain user-controlled content. Cells starting with `=`, `+`, `-` or `@` are executed as formulas when the file is opened in Excel or Sheets. Prefix such values with `'` or a tab in the escape helper. This matters because the feature is meant for customers to open in spreadsheets."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 55,
+      "severity": "non-blocking",
+      "title": "Loads up to 10k rows, including large JSON payloads, into memory, and there is no error handling",
+      "explanation": "`pool.query` buffers all rows, and each row's payload is unbounded JSON. Concurrent exports could use a lot of memory and tie up the event loop. Consider a cursor or `pg-query-stream` and stream the rows to the response. Also respect backpressure: `res.write` return values are ignored, and `res.write` is called once per row. If the query or a write fails after headers are sent, there is no handling. Check that async errors reach the Express error handler (Express 4 does not catch rejected promises), and that a mid-stream failure doesn't produce a truncated file that looks complete. A heavy export endpoint also warrants rate limiting."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 54,
+      "severity": "non-blocking",
+      "title": "No validation of projectId",
+      "explanation": "`Number(req.params.projectId)` can be NaN or non-integer, which would make Postgres throw and produce a 500. Validate it (e.g. with zod, which is already used in this file) and return 400. The existing handlers share this problem, so it could be handled in a shared param validator."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 53,
+      "severity": "nit",
+      "title": "Duplicated query and magic number; no tests",
+      "explanation": "The query is copied from the JSON endpoint with only the limit changed. Extract a shared helper and a named constant such as `EXPORT_LIMIT`. Add tests for authorization, escaping of commas, quotes and newlines in the fields, and the row limit. Also document that the export is truncated to the latest 10,000 events, because customers may assume it is the full log."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 59,
+      "severity": "nit",
+      "title": "Content-Type charset and BOM",
+      "explanation": "Use `text/csv; charset=utf-8`. Consider a UTF-8 BOM if Excel users are expected to open the file directly, since otherwise non-ASCII payload text may display incorrectly."
+    }
+  ],
+  "result_text": "{\"findings\":[{\"file\":\"src/routes/projects.ts\",\"line\":54,\"severity\":\"blocking\",\"title\":\"Missing authorization check (IDOR) on CSV export\",\"explanation\":\"Every other `/:projectId` handler calls `await assertProjectAccess(req.user, projectId)` before querying. This one doesn't. Any authenticated user, including one from another org or a non-member, can download any project's full event log by guessing the ID. Add `await assertProjectAccess(req.user, projectId)` as the first step, the same as the JSON events endpoint. Also add a test that a non-member gets a 403 or 404.\"},{\"file\":\"src/routes/projects.ts\",\"line\":63,\"severity\":\"blocking\",\"title\":\"CSV escaping is wrong: payload is double-JSON-encoded and `kind` is unescaped\",\"explanation\":\"`JSON.stringify(JSON.stringify(payload))` produces a JS string literal with backslash escapes, such as `\\\"{\\\\\\\"a\\\\\\\":1}\\\"`. CSV expects embedded quotes to be doubled (`\\\"\\\"`), not backslash-escaped, so Excel and most parsers will split or mangle rows. `kind` is written raw, so a comma, quote or newline in it breaks the row structure. Write a proper CSV escape helper, or use a library such as csv-stringify. The helper should wrap each field in quotes and replace `\\\"` with `\\\"\\\"`. Apply it to every string field, with the payload as `JSON.stringify(payload)` passed through it once.\"},{\"file\":\"src/routes/projects.ts\",\"line\":63,\"severity\":\"non-blocking\",\"title\":\"CSV/formula injection\",\"explanation\":\"Event kinds and payloads can contain user-controlled content. Cells starting with `=`, `+`, `-` or `@` are executed as formulas when the file is opened in Excel or Sheets. Prefix such values with `'` or a tab in the escape helper. This matters because the feature is meant for customers to open in spreadsheets.\"},{\"file\":\"src/routes/projects.ts\",\"line\":55,\"severity\":\"non-blocking\",\"title\":\"Loads up to 10k rows, including large JSON payloads, into memory, and there is no error handling\",\"explanation\":\"`pool.query` buffers all rows, and each row's payload is unbounded JSON. Concurrent exports could use a lot of memory and tie up the event loop. Consider a cursor or `pg-query-stream` and stream the rows to the response. Also respect backpressure: `res.write` return values are ignored, and `res.write` is called once per row. If the query or a write fails after headers are sent, there is no handling. Check that async errors reach the Express error handler (Express 4 does not catch rejected promises), and that a mid-stream failure doesn't produce a truncated file that looks complete. A heavy export endpoint also warrants rate limiting.\"},{\"file\":\"src/routes/projects.ts\",\"line\":54,\"severity\":\"non-blocking\",\"title\":\"No validation of projectId\",\"explanation\":\"`Number(req.params.projectId)` can be NaN or non-integer, which would make Postgres throw and produce a 500. Validate it (e.g. with zod, which is already used in this file) and return 400. The existing handlers share this problem, so it could be handled in a shared param validator.\"},{\"file\":\"src/routes/projects.ts\",\"line\":53,\"severity\":\"nit\",\"title\":\"Duplicated query and magic number; no tests\",\"explanation\":\"The query is copied from the JSON endpoint with only the limit changed. Extract a shared helper and a named constant such as `EXPORT_LIMIT`. Add tests for authorization, escaping of commas, quotes and newlines in the fields, and the row limit. Also document that the export is truncated to the latest 10,000 events, because customers may assume it is the full log.\"},{\"file\":\"src/routes/projects.ts\",\"line\":59,\"severity\":\"nit\",\"title\":\"Content-Type charset and BOM\",\"explanation\":\"Use `text/csv; charset=utf-8`. Consider a UTF-8 BOM if Excel users are expected to open the file directly, since otherwise non-ASCII payload text may display incorrectly.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add CSV export for project events\n\nCustomers asked to download a project's activity log. Adds `GET /projects/:projectId/events.csv`, which returns the latest 10,000 events as CSV. Same query as the JSON events endpoint, larger limit.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/projects.ts b/src/routes/projects.ts\nindex c30f46c..b019274 100644\n--- a/src/routes/projects.ts\n+++ b/src/routes/projects.ts\n@@ -49,3 +49,18 @@ projectsRouter.delete('/:projectId', async (req, res) => {\n   await pool.query('UPDATE projects SET archived_at = now() WHERE id = $1', [projectId])\n   res.status(204).end()\n })\n+\n+projectsRouter.get('/:projectId/events.csv', async (req, res) => {\n+  const projectId = Number(req.params.projectId)\n+  const { rows } = await pool.query(\n+    'SELECT id, kind, payload, created_at FROM events WHERE project_id = $1 ORDER BY id DESC LIMIT 10000',\n+    [projectId],\n+  )\n+  res.setHeader('content-type', 'text/csv')\n+  res.setHeader('content-disposition', `attachment; filename=\"project-${projectId}-events.csv\"`)\n+  res.write('id,kind,created_at,payload\\n')\n+  for (const row of rows) {\n+    res.write([row.id, row.kind, row.created_at.toISOString(), JSON.stringify(JSON.stringify(row.payload))].join(',') + '\\n')\n+  }\n+  res.end()\n+})\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

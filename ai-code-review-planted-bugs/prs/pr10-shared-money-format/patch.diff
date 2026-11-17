@@ -1,0 +1,31 @@
+diff --git a/web/src/components/InvoiceRow.tsx b/web/src/components/InvoiceRow.tsx
+index 8a1663a..b752821 100644
+--- a/web/src/components/InvoiceRow.tsx
++++ b/web/src/components/InvoiceRow.tsx
+@@ -1,13 +1,12 @@
+ import type { Invoice } from '../api/invoices'
+-
+-const money = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
++import { formatCents } from '../format'
+ 
+ export function InvoiceRow({ invoice }: { invoice: Invoice }) {
+   return (
+     <tr>
+       <td>#{invoice.id}</td>
+       <td>{new Date(invoice.period_start).toLocaleDateString()}</td>
+-      <td>{money.format(invoice.amount / 100)}</td>
++      <td>{formatCents(invoice.amount)}</td>
+       <td>{invoice.status}</td>
+     </tr>
+   )
+diff --git a/web/src/format.ts b/web/src/format.ts
+new file mode 100644
+index 0000000..42bf241
+--- /dev/null
++++ b/web/src/format.ts
+@@ -0,0 +1,5 @@
++const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
++
++export function formatCents(cents: number): string {
++  return usd.format(cents / 100)
++}

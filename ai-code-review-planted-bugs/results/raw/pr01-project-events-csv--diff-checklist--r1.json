@@ -1,0 +1,125 @@
+{
+  "pr": "pr01-project-events-csv",
+  "condition": "diff-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:27:25.362Z",
+  "duration_ms": 21518,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.029566000000000002,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1878,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 2205,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 1878,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 2205,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 1878,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1878
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/projects.ts",
+      "line": 53,
+      "severity": "blocking",
+      "title": "Missing authorization / tenant isolation check on events export",
+      "explanation": "The handler takes projectId from the URL and queries events directly with no check that the authenticated user belongs to the project's organization. Any user (or an unauthenticated caller, if the router has no auth middleware) can download any project's activity log by iterating IDs (IDOR). The export is also a bulk data-exfiltration vector. Apply the same membership/permission check used by the JSON events endpoint (ideally shared middleware or a helper) and add a test for a user from another tenant getting 403/404."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 60,
+      "severity": "blocking",
+      "title": "CSV injection (formula injection) and incorrect escaping of fields",
+      "explanation": "`kind` is written raw, so a value containing a comma, quote or newline breaks the row structure, and a value starting with =, +, -, @, tab or CR is executed as a formula when opened in Excel/Sheets. Event payloads are typically user-controlled, so this is exploitable against whoever downloads the file. Use a proper CSV serializer (e.g. csv-stringify) that quotes every field with RFC 4180 escaping, and prefix cells that begin with =, +, -, @, \\t or \\r with a single quote (or a tab) to neutralise formulas."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 60,
+      "severity": "blocking",
+      "title": "Payload is double-JSON-stringified, producing a broken/unusable column",
+      "explanation": "`JSON.stringify(JSON.stringify(row.payload))` yields a JSON string literal with backslash-escaped quotes (e.g. \"{\\\"a\\\":1}\"). CSV escapes quotes by doubling them, not with backslashes, so spreadsheet parsers will mis-split the field or show garbage with backslashes. Stringify once, then apply CSV quoting (replace \" with \"\" and wrap in quotes), preferably through the CSV library. Also handle a null payload explicitly (JSON.stringify(null) gives 'null', and undefined gives undefined, which join renders as an empty string)."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 53,
+      "severity": "blocking",
+      "title": "No validation of projectId and no error handling",
+      "explanation": "`Number(req.params.projectId)` yields NaN for non-numeric input (or non-integers like 1.5), which Postgres rejects with a 500 error. There is also no try/catch; on Express 4 a rejected promise from an async handler becomes an unhandled rejection and the request hangs. Validate that the id is a positive integer and return 400, and ensure errors are forwarded to the error handler (or use an async wrapper). Also consider returning 404 for nonexistent or archived projects rather than an empty CSV."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 55,
+      "severity": "non-blocking",
+      "title": "Loads up to 10,000 rows (with JSON payloads) into memory per request; no rate limiting",
+      "explanation": "pool.query buffers the whole result set in the Node process, and payloads can be large, so several concurrent exports can cause memory pressure and tie up pool connections. Stream the result with a cursor or pg-query-stream and honor backpressure on res.write, and/or add per-user rate limiting to the export route. Confirm there is an index on events(project_id, id DESC) so the ORDER BY ... LIMIT is an index scan rather than a sort."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 55,
+      "severity": "non-blocking",
+      "title": "Sensitive payload data exported in bulk without field filtering or audit",
+      "explanation": "The payload column may contain PII, tokens or internal fields that the JSON endpoint redacts or that are intended for staff only. The PR says it uses the 'same query' as the JSON endpoint, but the query here is a copy rather than shared code, so any filtering there is not applied. Reuse the same query/serializer function as the JSON endpoint, confirm what payload may contain, and consider writing an audit log entry for exports (without logging the contents)."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 55,
+      "severity": "non-blocking",
+      "title": "Silent truncation at 10,000 rows and no way to get the rest",
+      "explanation": "Projects with more than 10,000 events get a silently truncated file with no indication in the response or filename. Customers wanting a full activity log have no option for pagination or date ranges. Document the limit, add a header or filename hint when truncated (fetch limit+1 to detect it), and consider from/to filters or cursor-based export. Ordering is by id DESC, so the file is newest-first, which should be documented too (or sorted chronologically)."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 60,
+      "severity": "non-blocking",
+      "title": "Timestamp handling depends on the driver returning Date objects",
+      "explanation": "`row.created_at.toISOString()` throws if created_at is a string (e.g., a custom type parser, or a column of type text) or null, which would abort the response mid-stream after headers and part of the body were already sent. It is fine for timestamptz with default pg parsing, but build the rows before writing anything, or guard against it. The output is UTC ISO 8601, which should be documented in the CSV header or docs."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 58,
+      "severity": "nit",
+      "title": "Content-type lacks charset, no BOM, and filename sanitization",
+      "explanation": "Use 'text/csv; charset=utf-8' (res.type or setHeader) so non-ASCII content is interpreted correctly; Excel may additionally need a UTF-8 BOM. projectId is numeric so the filename is safe once validation is added, but keep that in mind if the filename ever includes a project name. Consider adding 'cache-control: no-store' because the response contains private data."
+    },
+    {
+      "file": "src/routes/projects.ts",
+      "line": 53,
+      "severity": "nit",
+      "title": "No tests and duplicated query",
+      "explanation": "There are no tests for the new route (auth, escaping with commas/quotes/newlines, formula prefixes, empty result, the 10,000 limit). The SQL duplicates the JSON endpoint's query with a different limit; extract a shared function taking a limit parameter so the two cannot drift. Also note that Express route ordering with '/:projectId' routes should be checked so '/:projectId/events.csv' is not shadowed."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/projects.ts\", \"line\": 53, \"severity\": \"blocking\", \"title\": \"Missing authorization / tenant isolation check on events export\", \"explanation\": \"The handler takes projectId from the URL and queries events directly with no check that the authenticated user belongs to the project's organization. Any user (or an unauthenticated caller, if the router has no auth middleware) can download any project's activity log by iterating IDs (IDOR). The export is also a bulk data-exfiltration vector. Apply the same membership/permission check used by the JSON events endpoint (ideally shared middleware or a helper) and add a test for a user from another tenant getting 403/404.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 60, \"severity\": \"blocking\", \"title\": \"CSV injection (formula injection) and incorrect escaping of fields\", \"explanation\": \"`kind` is written raw, so a value containing a comma, quote or newline breaks the row structure, and a value starting with =, +, -, @, tab or CR is executed as a formula when opened in Excel/Sheets. Event payloads are typically user-controlled, so this is exploitable against whoever downloads the file. Use a proper CSV serializer (e.g. csv-stringify) that quotes every field with RFC 4180 escaping, and prefix cells that begin with =, +, -, @, \\\\t or \\\\r with a single quote (or a tab) to neutralise formulas.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 60, \"severity\": \"blocking\", \"title\": \"Payload is double-JSON-stringified, producing a broken/unusable column\", \"explanation\": \"`JSON.stringify(JSON.stringify(row.payload))` yields a JSON string literal with backslash-escaped quotes (e.g. \\\"{\\\\\\\"a\\\\\\\":1}\\\"). CSV escapes quotes by doubling them, not with backslashes, so spreadsheet parsers will mis-split the field or show garbage with backslashes. Stringify once, then apply CSV quoting (replace \\\" with \\\"\\\" and wrap in quotes), preferably through the CSV library. Also handle a null payload explicitly (JSON.stringify(null) gives 'null', and undefined gives undefined, which join renders as an empty string).\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 53, \"severity\": \"blocking\", \"title\": \"No validation of projectId and no error handling\", \"explanation\": \"`Number(req.params.projectId)` yields NaN for non-numeric input (or non-integers like 1.5), which Postgres rejects with a 500 error. There is also no try/catch; on Express 4 a rejected promise from an async handler becomes an unhandled rejection and the request hangs. Validate that the id is a positive integer and return 400, and ensure errors are forwarded to the error handler (or use an async wrapper). Also consider returning 404 for nonexistent or archived projects rather than an empty CSV.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 55, \"severity\": \"non-blocking\", \"title\": \"Loads up to 10,000 rows (with JSON payloads) into memory per request; no rate limiting\", \"explanation\": \"pool.query buffers the whole result set in the Node process, and payloads can be large, so several concurrent exports can cause memory pressure and tie up pool connections. Stream the result with a cursor or pg-query-stream and honor backpressure on res.write, and/or add per-user rate limiting to the export route. Confirm there is an index on events(project_id, id DESC) so the ORDER BY ... LIMIT is an index scan rather than a sort.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 55, \"severity\": \"non-blocking\", \"title\": \"Sensitive payload data exported in bulk without field filtering or audit\", \"explanation\": \"The payload column may contain PII, tokens or internal fields that the JSON endpoint redacts or that are intended for staff only. The PR says it uses the 'same query' as the JSON endpoint, but the query here is a copy rather than shared code, so any filtering there is not applied. Reuse the same query/serializer function as the JSON endpoint, confirm what payload may contain, and consider writing an audit log entry for exports (without logging the contents).\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 55, \"severity\": \"non-blocking\", \"title\": \"Silent truncation at 10,000 rows and no way to get the rest\", \"explanation\": \"Projects with more than 10,000 events get a silently truncated file with no indication in the response or filename. Customers wanting a full activity log have no option for pagination or date ranges. Document the limit, add a header or filename hint when truncated (fetch limit+1 to detect it), and consider from/to filters or cursor-based export. Ordering is by id DESC, so the file is newest-first, which should be documented too (or sorted chronologically).\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 60, \"severity\": \"non-blocking\", \"title\": \"Timestamp handling depends on the driver returning Date objects\", \"explanation\": \"`row.created_at.toISOString()` throws if created_at is a string (e.g., a custom type parser, or a column of type text) or null, which would abort the response mid-stream after headers and part of the body were already sent. It is fine for timestamptz with default pg parsing, but build the rows before writing anything, or guard against it. The output is UTC ISO 8601, which should be documented in the CSV header or docs.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 58, \"severity\": \"nit\", \"title\": \"Content-type lacks charset, no BOM, and filename sanitization\", \"explanation\": \"Use 'text/csv; charset=utf-8' (res.type or setHeader) so non-ASCII content is interpreted correctly; Excel may additionally need a UTF-8 BOM. projectId is numeric so the filename is safe once validation is added, but keep that in mind if the filename ever includes a project name. Consider adding 'cache-control: no-store' because the response contains private data.\"}, {\"file\": \"src/routes/projects.ts\", \"line\": 53, \"severity\": \"nit\", \"title\": \"No tests and duplicated query\", \"explanation\": \"There are no tests for the new route (auth, escaping with commas/quotes/newlines, formula prefixes, empty result, the 10,000 limit). The SQL duplicates the JSON endpoint's query with a different limit; extract a shared function taking a limit parameter so the two cannot drift. Also note that Express route ordering with '/:projectId' routes should be checked so '/:projectId/events.csv' is not shadowed.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add CSV export for project events\n\nCustomers asked to download a project's activity log. Adds `GET /projects/:projectId/events.csv`, which returns the latest 10,000 events as CSV. Same query as the JSON events endpoint, larger limit.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/projects.ts b/src/routes/projects.ts\nindex c30f46c..b019274 100644\n--- a/src/routes/projects.ts\n+++ b/src/routes/projects.ts\n@@ -49,3 +49,18 @@ projectsRouter.delete('/:projectId', async (req, res) => {\n   await pool.query('UPDATE projects SET archived_at = now() WHERE id = $1', [projectId])\n   res.status(204).end()\n })\n+\n+projectsRouter.get('/:projectId/events.csv', async (req, res) => {\n+  const projectId = Number(req.params.projectId)\n+  const { rows } = await pool.query(\n+    'SELECT id, kind, payload, created_at FROM events WHERE project_id = $1 ORDER BY id DESC LIMIT 10000',\n+    [projectId],\n+  )\n+  res.setHeader('content-type', 'text/csv')\n+  res.setHeader('content-disposition', `attachment; filename=\"project-${projectId}-events.csv\"`)\n+  res.write('id,kind,created_at,payload\\n')\n+  for (const row of rows) {\n+    res.write([row.id, row.kind, row.created_at.toISOString(), JSON.stringify(JSON.stringify(row.payload))].join(',') + '\\n')\n+  }\n+  res.end()\n+})\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

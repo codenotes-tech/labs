@@ -1,0 +1,90 @@
+{
+  "pr": "pr03-events-project-index",
+  "condition": "diff-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:27:03.963Z",
+  "duration_ms": 11280,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.012430799999999999,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 668,
+    "cache_read_input_tokens": 748,
+    "output_tokens": 968,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 668,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 968,
+        "cache_read_input_tokens": 748,
+        "cache_creation_input_tokens": 668,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 668
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "blocking",
+      "title": "Index creation without CONCURRENTLY will lock writes on a production table",
+      "explanation": "A plain CREATE INDEX on Postgres takes a SHARE lock on `events`, blocking all INSERT/UPDATE/DELETE for the duration of the build. Events tables are typically large and write-heavy, so this can cause an outage or request pile-up. Use `CREATE INDEX CONCURRENTLY IF NOT EXISTS ...`. Note that CONCURRENTLY cannot run inside a transaction block, so make sure the migration tool is configured to run this migration outside a transaction (e.g. a no-transaction directive), and handle the case of a failed build leaving an INVALID index (drop and retry)."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "non-blocking",
+      "title": "Missing IF NOT EXISTS / idempotency",
+      "explanation": "If the index was already created manually in production (common when someone has tried to fix a slow query by hand) or a migration is re-run after a partial failure, this will fail. Use `IF NOT EXISTS` to make the migration safe to re-run."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": null,
+      "severity": "non-blocking",
+      "title": "No down/rollback migration",
+      "explanation": "There is no corresponding `DROP INDEX CONCURRENTLY IF EXISTS events_project_id_idx;`. If the project's migration convention includes down migrations, add one so the change can be reverted cleanly if the index causes write amplification or planner regressions."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": null,
+      "severity": "non-blocking",
+      "title": "Query/index match and benefit are not verified in the PR",
+      "explanation": "The PR claims the query does a sequential scan, but includes no EXPLAIN (ANALYZE, BUFFERS) before/after, and the query itself is not in the diff. Please confirm the endpoint filters by `project_id` and orders by `id DESC` (with keyset pagination on `id < ?` and a LIMIT) so the index is actually used and no extra sort is needed. If the query also filters on other columns (e.g. event type or created_at), a different or partial index may be better. Also check whether an existing index on `(project_id)` becomes redundant and can be dropped to reduce write overhead."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": null,
+      "severity": "nit",
+      "title": "Index name could be more descriptive",
+      "explanation": "`events_project_id_idx` does not reflect the column ordering. Something like `events_project_id_id_desc_idx` makes the purpose clearer and avoids confusion with a plain single-column index on `project_id`."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"blocking\", \"title\": \"Index creation without CONCURRENTLY will lock writes on a production table\", \"explanation\": \"A plain CREATE INDEX on Postgres takes a SHARE lock on `events`, blocking all INSERT/UPDATE/DELETE for the duration of the build. Events tables are typically large and write-heavy, so this can cause an outage or request pile-up. Use `CREATE INDEX CONCURRENTLY IF NOT EXISTS ...`. Note that CONCURRENTLY cannot run inside a transaction block, so make sure the migration tool is configured to run this migration outside a transaction (e.g. a no-transaction directive), and handle the case of a failed build leaving an INVALID index (drop and retry).\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"non-blocking\", \"title\": \"Missing IF NOT EXISTS / idempotency\", \"explanation\": \"If the index was already created manually in production (common when someone has tried to fix a slow query by hand) or a migration is re-run after a partial failure, this will fail. Use `IF NOT EXISTS` to make the migration safe to re-run.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": null, \"severity\": \"non-blocking\", \"title\": \"No down/rollback migration\", \"explanation\": \"There is no corresponding `DROP INDEX CONCURRENTLY IF EXISTS events_project_id_idx;`. If the project's migration convention includes down migrations, add one so the change can be reverted cleanly if the index causes write amplification or planner regressions.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": null, \"severity\": \"non-blocking\", \"title\": \"Query/index match and benefit are not verified in the PR\", \"explanation\": \"The PR claims the query does a sequential scan, but includes no EXPLAIN (ANALYZE, BUFFERS) before/after, and the query itself is not in the diff. Please confirm the endpoint filters by `project_id` and orders by `id DESC` (with keyset pagination on `id < ?` and a LIMIT) so the index is actually used and no extra sort is needed. If the query also filters on other columns (e.g. event type or created_at), a different or partial index may be better. Also check whether an existing index on `(project_id)` becomes redundant and can be dropped to reduce write overhead.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": null, \"severity\": \"nit\", \"title\": \"Index name could be more descriptive\", \"explanation\": \"`events_project_id_idx` does not reflect the column ordering. Something like `events_project_id_id_desc_idx` makes the purpose clearer and avoids confusion with a plain single-column index on `project_id`.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Speed up the project activity feed\n\nThe project events endpoint does a sequential scan per project. Adds an index on `events (project_id, id DESC)` to match the query.\n\n## Diff\n\n```diff\ndiff --git a/migrations/005_events_project_idx.sql b/migrations/005_events_project_idx.sql\nnew file mode 100644\nindex 0000000..0586576\n--- /dev/null\n+++ b/migrations/005_events_project_idx.sql\n@@ -0,0 +1 @@\n+CREATE INDEX events_project_id_idx ON events (project_id, id DESC);\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

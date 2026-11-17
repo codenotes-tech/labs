@@ -1,0 +1,123 @@
+{
+  "pr": "pr13-invoice-pdf-download",
+  "condition": "repo-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:35:56.407Z",
+  "duration_ms": 16904,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 3,
+  "cost_usd": 0.0355899,
+  "usage": {
+    "input_tokens": 4,
+    "cache_creation_input_tokens": 4761,
+    "cache_read_input_tokens": 8979,
+    "output_tokens": 1564,
+    "output_tokens_details": {
+      "thinking_tokens": 15
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 4761,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1243,
+        "cache_read_input_tokens": 4820,
+        "cache_creation_input_tokens": 4100,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 4100
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-LBFIzn/src/routes/invoices.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "amount|period_start|currency|status",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-LBFIzn",
+        "glob": "!node_modules/**",
+        "output_mode": "content",
+        "head_limit": 60
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-LBFIzn/src/routes/invoices.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 43,
+      "severity": "blocking",
+      "title": "Missing assertBillingAccess on print route",
+      "explanation": "The list and detail invoice routes call assertBillingAccess(req.user). This route does not. Any authenticated member of the org, including users without billing permission, can read invoice amounts and status. The PR description says the route is scoped like the other invoice routes, but only the org scoping is copied. Add assertBillingAccess(req.user) as the first line of the handler."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 52,
+      "severity": "blocking",
+      "title": "Amount hard-codes /100, which is wrong for non-2-decimal currencies",
+      "explanation": "docs/CONVENTIONS.md says never to multiply or divide by 100 and to use fromMinorUnits/minorUnitDigits from src/lib/money.ts. For JPY and KRW (0 decimals) this shows an amount 100 times too small. For BHD and KWD (3 decimals) it shows an amount 10 times too large. This is a financial document for accounting teams. Use fromMinorUnits(Number(invoice.amount), invoice.currency).toFixed(minorUnitDigits(invoice.currency))."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 56,
+      "severity": "non-blocking",
+      "title": "Period dates are rendered in UTC",
+      "explanation": "toISOString().slice(0,10) formats the TIMESTAMPTZ values in UTC. For an org whose billing periods start at local midnight, the printed date can be off by one day compared with what the customer expects. Decide on a billing timezone and format with it. At least confirm that the periods are UTC-aligned. Also note that period_end may be an exclusive boundary, so printing it as 'to' can overstate the period by a day."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 58,
+      "severity": "non-blocking",
+      "title": "Status and currency are interpolated into HTML without escaping",
+      "explanation": "org_name is escaped, but invoice.status and invoice.currency are not. They are internal values today, so this is not exploitable now. It is fragile if the values ever become free-form or come from the provider. Escape every interpolated value consistently."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 53,
+      "severity": "non-blocking",
+      "title": "Missing response hardening and print-friendliness",
+      "explanation": "The HTML has no <meta charset>, <title> or <html>/<body> wrapper. Non-ASCII org names may render incorrectly. Sensitive billing data is also served without Cache-Control: private, no-store. Consider adding a Content-Security-Policy header and Content-Disposition if a download is intended. The PR title says 'download', but the route renders inline."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 47,
+      "severity": "non-blocking",
+      "title": "Invalid invoiceId is not validated",
+      "explanation": "Number(req.params.invoiceId) returns NaN for non-numeric input. Fractional or oversized values are also passed through. pg will then throw an error, which becomes a 500 instead of a 404 or 400. Validate with zod, as the list route does, or reject non-positive-integer ids."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 43,
+      "severity": "nit",
+      "title": "No tests, and the async handler's error handling is unclear",
+      "explanation": "There are no tests for tenant isolation, a 404 for another org's invoice, permission denial, or non-2-decimal currencies. Also confirm that the Express version or wrapper handles rejected promises from async handlers. Also consider whether the invoice should be rendered through the serializer or a shared helper so the money formatting is not duplicated."
+    }
+  ],
+  "result_text": "```json\n{\"findings\":[{\"file\":\"src/routes/invoices.ts\",\"line\":43,\"severity\":\"blocking\",\"title\":\"Missing assertBillingAccess on print route\",\"explanation\":\"The list and detail invoice routes call assertBillingAccess(req.user). This route does not. Any authenticated member of the org, including users without billing permission, can read invoice amounts and status. The PR description says the route is scoped like the other invoice routes, but only the org scoping is copied. Add assertBillingAccess(req.user) as the first line of the handler.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":52,\"severity\":\"blocking\",\"title\":\"Amount hard-codes /100, which is wrong for non-2-decimal currencies\",\"explanation\":\"docs/CONVENTIONS.md says never to multiply or divide by 100 and to use fromMinorUnits/minorUnitDigits from src/lib/money.ts. For JPY and KRW (0 decimals) this shows an amount 100 times too small. For BHD and KWD (3 decimals) it shows an amount 10 times too large. This is a financial document for accounting teams. Use fromMinorUnits(Number(invoice.amount), invoice.currency).toFixed(minorUnitDigits(invoice.currency)).\"},{\"file\":\"src/routes/invoices.ts\",\"line\":56,\"severity\":\"non-blocking\",\"title\":\"Period dates are rendered in UTC\",\"explanation\":\"toISOString().slice(0,10) formats the TIMESTAMPTZ values in UTC. For an org whose billing periods start at local midnight, the printed date can be off by one day compared with what the customer expects. Decide on a billing timezone and format with it. At least confirm that the periods are UTC-aligned. Also note that period_end may be an exclusive boundary, so printing it as 'to' can overstate the period by a day.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":58,\"severity\":\"non-blocking\",\"title\":\"Status and currency are interpolated into HTML without escaping\",\"explanation\":\"org_name is escaped, but invoice.status and invoice.currency are not. They are internal values today, so this is not exploitable now. It is fragile if the values ever become free-form or come from the provider. Escape every interpolated value consistently.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":53,\"severity\":\"non-blocking\",\"title\":\"Missing response hardening and print-friendliness\",\"explanation\":\"The HTML has no <meta charset>, <title> or <html>/<body> wrapper. Non-ASCII org names may render incorrectly. Sensitive billing data is also served without Cache-Control: private, no-store. Consider adding a Content-Security-Policy header and Content-Disposition if a download is intended. The PR title says 'download', but the route renders inline.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":47,\"severity\":\"non-blocking\",\"title\":\"Invalid invoiceId is not validated\",\"explanation\":\"Number(req.params.invoiceId) returns NaN for non-numeric input. Fractional or oversized values are also passed through. pg will then throw an error, which becomes a 500 instead of a 404 or 400. Validate with zod, as the list route does, or reject non-positive-integer ids.\"},{\"file\":\"src/routes/invoices.ts\",\"line\":43,\"severity\":\"nit\",\"title\":\"No tests, and the async handler's error handling is unclear\",\"explanation\":\"There are no tests for tenant isolation, a 404 for another org's invoice, permission denial, or non-2-decimal currencies. Also confirm that the Express version or wrapper handles rejected promises from async handlers. Also consider whether the invoice should be rendered through the serializer or a shared helper so the money formatting is not duplicated.\"}]}\n```",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add printable invoice download\n\nCustomers want a printable copy of an invoice for their accounting team. Adds `GET /invoices/:invoiceId/print`, which returns a simple HTML invoice. Scoped to the caller's organization like the other invoice routes.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex 938fffd..04598f2 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -39,3 +39,25 @@ invoicesRouter.get('/:invoiceId', async (req, res) => {\n   if (!rows[0]) return res.status(404).json({ error: 'not_found' })\n   res.json(serializeInvoice(rows[0]))\n })\n+\n+invoicesRouter.get('/:invoiceId/print', async (req, res) => {\n+  const { rows } = await pool.query(\n+    `SELECT i.id, i.amount, i.currency, i.status, i.period_start, i.period_end, o.name AS org_name\n+       FROM invoices i JOIN organizations o ON o.id = i.org_id\n+      WHERE i.id = $1 AND i.org_id = $2`,\n+    [Number(req.params.invoiceId), req.user.orgId],\n+  )\n+  const invoice = rows[0]\n+  if (!invoice) return res.status(404).json({ error: 'not_found' })\n+  const amount = (Number(invoice.amount) / 100).toFixed(2)\n+  res.type('html').send(`<!doctype html>\n+<h1>Invoice #${invoice.id}</h1>\n+<p>${escapeHtml(invoice.org_name)}</p>\n+<p>Period: ${invoice.period_start.toISOString().slice(0, 10)} to ${invoice.period_end.toISOString().slice(0, 10)}</p>\n+<p>Amount due: ${amount} ${invoice.currency.toUpperCase()}</p>\n+<p>Status: ${invoice.status}</p>`)\n+})\n+\n+function escapeHtml(value: string): string {\n+  return value.replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c] as string)\n+}\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

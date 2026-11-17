@@ -1,0 +1,7 @@
+diff --git a/migrations/005_events_project_idx.sql b/migrations/005_events_project_idx.sql
+new file mode 100644
+index 0000000..0586576
+--- /dev/null
++++ b/migrations/005_events_project_idx.sql
+@@ -0,0 +1 @@
++CREATE INDEX events_project_id_idx ON events (project_id, id DESC);

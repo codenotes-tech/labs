@@ -1,0 +1,90 @@
+{
+  "pr": "pr07-log-signup-payloads",
+  "condition": "diff-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:28:31.908Z",
+  "duration_ms": 13127,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0133506,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 663,
+    "cache_read_input_tokens": 946,
+    "output_tokens": 1060,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 663,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1060,
+        "cache_read_input_tokens": 946,
+        "cache_creation_input_tokens": 663,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 663
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/auth.ts",
+      "line": 17,
+      "severity": "blocking",
+      "title": "Raw signup request body (including plaintext password) is logged",
+      "explanation": "`req.body` on the signup route contains the plaintext password, email (PII) and organization. The PR claims the logger redacts sensitive fields, but this is a fragile assumption: redaction is typically key-name based and may not be applied to nested objects, differently named fields (e.g. `pass`, `passwd`, `confirmPassword`, `newPassword`), or unexpected shapes. Invalid signups are exactly the case where clients send malformed or unexpected payloads, so the redaction is least likely to match there. Users also often mistype or put a password in the wrong field (e.g. in the email field), which would then be written to logs, log aggregators and backups. Remove the raw body log. Instead log a safe, allow-listed summary such as which keys were present, their types and lengths, and a boolean for whether the email looks valid, or log the zod validation error (issues contain paths and codes, not values) when validation fails."
+    },
+    {
+      "file": "src/routes/auth.ts",
+      "line": 17,
+      "severity": "blocking",
+      "title": "Logging happens before validation, so arbitrary unvalidated, unbounded client input is written to logs",
+      "explanation": "The payload is logged before `signupSchema.parse`, so any unauthenticated caller can write arbitrarily large or crafted content (very large bodies, log-injection strings, deeply nested objects) into the logs. That risks log volume/cost abuse, storage blowup, and polluted log data. If body logging is truly needed, log only after validation of the shape, truncate, and use an allow-list of fields."
+    },
+    {
+      "file": "src/routes/auth.ts",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "Debugging goal is better served by logging validation failures",
+      "explanation": "The stated goal is to understand why signups fail validation. `signupSchema.parse` throws a ZodError; catching it (or using `safeParse`) and logging `error.issues` (field paths, error codes, messages) answers 'why did it fail' without logging any values. It would also let the route return a proper 400 with field errors instead of relying on a generic error handler (verify that an unhandled ZodError does not become a 500). This also logs only failures rather than every signup attempt, cutting volume."
+    },
+    {
+      "file": "src/routes/auth.ts",
+      "line": 17,
+      "severity": "non-blocking",
+      "title": "Log level and message not suited for every signup attempt",
+      "explanation": "`info` for every attempt, with full payloads, is noisy and gets retained at default production levels. If any temporary diagnostic logging is kept, use `debug` or `warn` on failure only, and add a request ID/correlation ID so entries can be tied to responses without including the payload."
+    },
+    {
+      "file": "src/routes/auth.ts",
+      "line": 17,
+      "severity": "nit",
+      "title": "No test covering the redaction assumption",
+      "explanation": "If the team relies on the logger's redaction, add a test that asserts password and email fields are masked for this route's payload shape (including nested and misnamed keys). Better still, avoid depending on it by not logging the body."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/auth.ts\", \"line\": 17, \"severity\": \"blocking\", \"title\": \"Raw signup request body (including plaintext password) is logged\", \"explanation\": \"`req.body` on the signup route contains the plaintext password, email (PII) and organization. The PR claims the logger redacts sensitive fields, but this is a fragile assumption: redaction is typically key-name based and may not be applied to nested objects, differently named fields (e.g. `pass`, `passwd`, `confirmPassword`, `newPassword`), or unexpected shapes. Invalid signups are exactly the case where clients send malformed or unexpected payloads, so the redaction is least likely to match there. Users also often mistype or put a password in the wrong field (e.g. in the email field), which would then be written to logs, log aggregators and backups. Remove the raw body log. Instead log a safe, allow-listed summary such as which keys were present, their types and lengths, and a boolean for whether the email looks valid, or log the zod validation error (issues contain paths and codes, not values) when validation fails.\"}, {\"file\": \"src/routes/auth.ts\", \"line\": 17, \"severity\": \"blocking\", \"title\": \"Logging happens before validation, so arbitrary unvalidated, unbounded client input is written to logs\", \"explanation\": \"The payload is logged before `signupSchema.parse`, so any unauthenticated caller can write arbitrarily large or crafted content (very large bodies, log-injection strings, deeply nested objects) into the logs. That risks log volume/cost abuse, storage blowup, and polluted log data. If body logging is truly needed, log only after validation of the shape, truncate, and use an allow-list of fields.\"}, {\"file\": \"src/routes/auth.ts\", \"line\": 18, \"severity\": \"non-blocking\", \"title\": \"Debugging goal is better served by logging validation failures\", \"explanation\": \"The stated goal is to understand why signups fail validation. `signupSchema.parse` throws a ZodError; catching it (or using `safeParse`) and logging `error.issues` (field paths, error codes, messages) answers 'why did it fail' without logging any values. It would also let the route return a proper 400 with field errors instead of relying on a generic error handler (verify that an unhandled ZodError does not become a 500). This also logs only failures rather than every signup attempt, cutting volume.\"}, {\"file\": \"src/routes/auth.ts\", \"line\": 17, \"severity\": \"non-blocking\", \"title\": \"Log level and message not suited for every signup attempt\", \"explanation\": \"`info` for every attempt, with full payloads, is noisy and gets retained at default production levels. If any temporary diagnostic logging is kept, use `debug` or `warn` on failure only, and add a request ID/correlation ID so entries can be tied to responses without including the payload.\"}, {\"file\": \"src/routes/auth.ts\", \"line\": 17, \"severity\": \"nit\", \"title\": \"No test covering the redaction assumption\", \"explanation\": \"If the team relies on the logger's redaction, add a test that asserts password and email fields are masked for this route's payload shape (including nested and misnamed keys). Better still, avoid depending on it by not logging the body.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Log signup payloads to debug failed signups\n\nSome signups fail validation and we can't tell what clients sent. This logs the incoming payload before validation. The logger already redacts sensitive fields.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/auth.ts b/src/routes/auth.ts\nindex 0a32b6e..7a516be 100644\n--- a/src/routes/auth.ts\n+++ b/src/routes/auth.ts\n@@ -14,6 +14,7 @@ const signupSchema = z.object({\n })\n \n authRouter.post('/signup', async (req, res) => {\n+  logger.info('signup attempt', { body: req.body })\n   const { email, password, organization } = signupSchema.parse(req.body)\n   const passwordHash = await hashPassword(password)\n   const { rows } = await pool.query(\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

@@ -1,0 +1,97 @@
+{
+  "pr": "pr06-amount-cents-field",
+  "condition": "diff-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:19:34.874Z",
+  "duration_ms": 12820,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.016346,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 1503,
+    "cache_read_input_tokens": 0,
+    "output_tokens": 1033,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 1503,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1033,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 1503,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 1503
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Breaking API change: response field renamed without versioning or deprecation",
+      "explanation": "Removing `amount` from the response will break every existing client that reads it (they will get `undefined`, which can silently render as NaN or blank amounts in billing UIs). Either keep `amount` alongside `amount_cents` for a deprecation period, or ship the rename under a new API version, and coordinate with consumers (web frontend, mobile apps, webhooks, partner integrations) before removal."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Unverified that the underlying value is actually in cents",
+      "explanation": "The rename only changes the label; the value is still `Number(row.amount)` straight from the DB. The PR premise is that people assume dollars, but nothing shows the column stores integer cents. If `row.amount` is a decimal/numeric in major units (note `Number()` on a string suggests a Postgres NUMERIC/DECIMAL), then `amount_cents` would now be mislabeled and 100x wrong in meaning, which is worse than the ambiguity being fixed. Confirm the column's unit and type; if it's in major units, multiply by 100 and round (`Math.round`), or fix the naming accordingly."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "non-blocking",
+      "title": "Other consumers of the serialized shape not updated",
+      "explanation": "The diff touches only the serializer. Any TypeScript response types, OpenAPI/Swagger specs, API docs, SDKs, generated clients, webhook payload schemas, tests/fixtures, and snapshot tests referencing `amount` likely need updating. Please grep for usages and include them in this PR, or link follow-ups."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "non-blocking",
+      "title": "No tests added or updated",
+      "explanation": "There is no test covering the serializer output. Add or update a test asserting `amount_cents` is present (and `amount` absent or deprecated, depending on the chosen migration path) and that the value is an integer number of cents."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "nit",
+      "title": "Inconsistent naming between InvoiceRow and the response",
+      "explanation": "The row still exposes `amount` while the response exposes `amount_cents`. If the DB column is truly cents, consider renaming the column/row field too (or adding a comment) so the unit is clear throughout the codebase, not just at the API boundary."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "nit",
+      "title": "Number() conversion may mask invalid values",
+      "explanation": "`Number(row.amount)` yields NaN for malformed input and would serialize as null in JSON. Since this field is now explicitly an integer count of cents, consider validating with `Number.isInteger` or parsing more strictly."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Breaking API change: response field renamed without versioning or deprecation\", \"explanation\": \"Removing `amount` from the response will break every existing client that reads it (they will get `undefined`, which can silently render as NaN or blank amounts in billing UIs). Either keep `amount` alongside `amount_cents` for a deprecation period, or ship the rename under a new API version, and coordinate with consumers (web frontend, mobile apps, webhooks, partner integrations) before removal.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Unverified that the underlying value is actually in cents\", \"explanation\": \"The rename only changes the label; the value is still `Number(row.amount)` straight from the DB. The PR premise is that people assume dollars, but nothing shows the column stores integer cents. If `row.amount` is a decimal/numeric in major units (note `Number()` on a string suggests a Postgres NUMERIC/DECIMAL), then `amount_cents` would now be mislabeled and 100x wrong in meaning, which is worse than the ambiguity being fixed. Confirm the column's unit and type; if it's in major units, multiply by 100 and round (`Math.round`), or fix the naming accordingly.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"non-blocking\", \"title\": \"Other consumers of the serialized shape not updated\", \"explanation\": \"The diff touches only the serializer. Any TypeScript response types, OpenAPI/Swagger specs, API docs, SDKs, generated clients, webhook payload schemas, tests/fixtures, and snapshot tests referencing `amount` likely need updating. Please grep for usages and include them in this PR, or link follow-ups.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"non-blocking\", \"title\": \"No tests added or updated\", \"explanation\": \"There is no test covering the serializer output. Add or update a test asserting `amount_cents` is present (and `amount` absent or deprecated, depending on the chosen migration path) and that the value is an integer number of cents.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"nit\", \"title\": \"Inconsistent naming between InvoiceRow and the response\", \"explanation\": \"The row still exposes `amount` while the response exposes `amount_cents`. If the DB column is truly cents, consider renaming the column/row field too (or adding a comment) so the unit is clear throughout the codebase, not just at the API boundary.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"nit\", \"title\": \"Number() conversion may mask invalid values\", \"explanation\": \"`Number(row.amount)` yields NaN for malformed input and would serialize as null in JSON. Since this field is now explicitly an integer count of cents, consider validating with `Number.isInteger` or parsing more strictly.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Rename invoice amount to amount_cents\n\n`amount` is ambiguous: people reading the API assume dollars. This renames the response field to `amount_cents` so the unit is explicit.\n\n## Diff\n\n```diff\ndiff --git a/src/serializers/invoice.ts b/src/serializers/invoice.ts\nindex 653d75e..9e281b3 100644\n--- a/src/serializers/invoice.ts\n+++ b/src/serializers/invoice.ts\n@@ -11,7 +11,7 @@ export interface InvoiceRow {\n export function serializeInvoice(row: InvoiceRow) {\n   return {\n     id: row.id,\n-    amount: Number(row.amount),\n+    amount_cents: Number(row.amount),\n     currency: row.currency,\n     status: row.status,\n     period_start: row.period_start.toISOString(),\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

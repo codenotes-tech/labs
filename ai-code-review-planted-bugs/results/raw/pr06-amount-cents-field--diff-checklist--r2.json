@@ -1,0 +1,90 @@
+{
+  "pr": "pr06-amount-cents-field",
+  "condition": "diff-checklist",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:27:38.652Z",
+  "duration_ms": 12805,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0136649,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 664,
+    "cache_read_input_tokens": 949,
+    "output_tokens": 1091,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 664,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1091,
+        "cache_read_input_tokens": 949,
+        "cache_creation_input_tokens": 664,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 664
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Breaking API change: response field `amount` removed without a compatibility period",
+      "explanation": "Renaming the field in the response removes `amount` for every existing client (web app, mobile apps, partner integrations, webhooks that reuse this serializer). Those clients will read `undefined`, which can show as NaN or blank amounts, or break billing reconciliation. Either (a) emit both `amount` and `amount_cents` for a deprecation window, announce the deprecation, and remove `amount` later, or (b) ship it under a new API version. Also confirm all in-repo consumers (frontend, SDKs, OpenAPI spec, tests, docs) are updated in this PR or a coordinated one."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Field name now claims cents but the underlying value's unit is not verified",
+      "explanation": "The PR only renames the key; `row.amount` is still passed through `Number(row.amount)`. If the DB column is stored as a decimal/numeric in major units (e.g. 12.50), the API will now falsely label dollars as cents, which is worse than the current ambiguity, as clients will divide by 100 and show wrong amounts. Please confirm the column's unit (integer minor units vs. decimal). If it is decimal major units, convert (`Math.round(Number(row.amount) * 100)`, or better, use a decimal-safe conversion) or fix the storage. Also note that zero-decimal currencies (JPY) and three-decimal currencies (KWD, BHD) do not have 100 minor units per major unit, so 'cents' is not strictly accurate across `currency`."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "non-blocking",
+      "title": "`Number()` on a possibly string/bigint/numeric DB value",
+      "explanation": "Postgres `numeric`/`bigint` often arrive as strings, and `Number()` silently yields NaN for bad input or loses precision above 2^53. Since the field is now explicitly an integer count of cents, consider validating with `Number.isSafeInteger` (or fail loudly) rather than coercing blindly."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "non-blocking",
+      "title": "Naming inconsistency with the internal row type and other serializers",
+      "explanation": "`InvoiceRow` still exposes `amount`, so the serializer maps `amount` to `amount_cents`. If the DB column also holds cents, consider renaming it (with a safe, backward-compatible migration) or at least adding a comment so the mapping is not confusing. Check whether other serializers/endpoints (e.g. payments, line items, refunds, webhooks) use `amount` and whether they should get the same treatment for consistency."
+    },
+    {
+      "file": null,
+      "line": null,
+      "severity": "non-blocking",
+      "title": "No tests or API docs/changelog updated",
+      "explanation": "The diff has no test changes. Add or update serializer tests asserting the new key (and, during a transition, the old one), and update the OpenAPI spec/docs/changelog to describe the rename and unit."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Breaking API change: response field `amount` removed without a compatibility period\", \"explanation\": \"Renaming the field in the response removes `amount` for every existing client (web app, mobile apps, partner integrations, webhooks that reuse this serializer). Those clients will read `undefined`, which can show as NaN or blank amounts, or break billing reconciliation. Either (a) emit both `amount` and `amount_cents` for a deprecation window, announce the deprecation, and remove `amount` later, or (b) ship it under a new API version. Also confirm all in-repo consumers (frontend, SDKs, OpenAPI spec, tests, docs) are updated in this PR or a coordinated one.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Field name now claims cents but the underlying value's unit is not verified\", \"explanation\": \"The PR only renames the key; `row.amount` is still passed through `Number(row.amount)`. If the DB column is stored as a decimal/numeric in major units (e.g. 12.50), the API will now falsely label dollars as cents, which is worse than the current ambiguity, as clients will divide by 100 and show wrong amounts. Please confirm the column's unit (integer minor units vs. decimal). If it is decimal major units, convert (`Math.round(Number(row.amount) * 100)`, or better, use a decimal-safe conversion) or fix the storage. Also note that zero-decimal currencies (JPY) and three-decimal currencies (KWD, BHD) do not have 100 minor units per major unit, so 'cents' is not strictly accurate across `currency`.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"non-blocking\", \"title\": \"`Number()` on a possibly string/bigint/numeric DB value\", \"explanation\": \"Postgres `numeric`/`bigint` often arrive as strings, and `Number()` silently yields NaN for bad input or loses precision above 2^53. Since the field is now explicitly an integer count of cents, consider validating with `Number.isSafeInteger` (or fail loudly) rather than coercing blindly.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"non-blocking\", \"title\": \"Naming inconsistency with the internal row type and other serializers\", \"explanation\": \"`InvoiceRow` still exposes `amount`, so the serializer maps `amount` to `amount_cents`. If the DB column also holds cents, consider renaming it (with a safe, backward-compatible migration) or at least adding a comment so the mapping is not confusing. Check whether other serializers/endpoints (e.g. payments, line items, refunds, webhooks) use `amount` and whether they should get the same treatment for consistency.\"}, {\"file\": null, \"line\": null, \"severity\": \"non-blocking\", \"title\": \"No tests or API docs/changelog updated\", \"explanation\": \"The diff has no test changes. Add or update serializer tests asserting the new key (and, during a transition, the old one), and update the OpenAPI spec/docs/changelog to describe the rename and unit.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Rename invoice amount to amount_cents\n\n`amount` is ambiguous: people reading the API assume dollars. This renames the response field to `amount_cents` so the unit is explicit.\n\n## Diff\n\n```diff\ndiff --git a/src/serializers/invoice.ts b/src/serializers/invoice.ts\nindex 653d75e..9e281b3 100644\n--- a/src/serializers/invoice.ts\n+++ b/src/serializers/invoice.ts\n@@ -11,7 +11,7 @@ export interface InvoiceRow {\n export function serializeInvoice(row: InvoiceRow) {\n   return {\n     id: row.id,\n-    amount: Number(row.amount),\n+    amount_cents: Number(row.amount),\n     currency: row.currency,\n     status: row.status,\n     period_start: row.period_start.toISOString(),\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

@@ -1,0 +1,97 @@
+{
+  "pr": "pr14-annual-plan-pricing",
+  "condition": "diff-checklist",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:37:16.890Z",
+  "duration_ms": 16828,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0219265,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 667,
+    "cache_read_input_tokens": 1045,
+    "output_tokens": 1915,
+    "output_tokens_details": {
+      "thinking_tokens": 630
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 667,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1915,
+        "cache_read_input_tokens": 1045,
+        "cache_creation_input_tokens": 667,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 667
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/services/pricing.ts",
+      "line": 22,
+      "severity": "blocking",
+      "title": "Annual price reimplements the monthly calculation instead of reusing monthlyPriceMinor",
+      "explanation": "The PR says checkout and invoicing should compute the price the same way as the monthly price. But this reads `PLANS[plan].monthly[currency] * seats` directly and multiplies by 100 later, instead of calling `monthlyPriceMinor(plan, currency, seats)`. The existing function is named `...Minor`, so it already returns minor units. If `PLANS[...].monthly` is also stored in minor units, the `* 100` makes every annual invoice 100x too high. If it is stored in major units, the code duplicates whatever conversion and rounding `monthlyPriceMinor` does and can drift from it later (for example, if it adds per-seat tiers, minimums or taxes). Derive the annual price from the monthly function: `const monthlyMinor = monthlyPriceMinor(plan, currency, seats)`. This affects real invoices, so it should be fixed before launch."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 23,
+      "severity": "blocking",
+      "title": "Hard-coded `* 100` is wrong for currencies without 2 decimal places",
+      "explanation": "Minor-unit exponents differ by currency: JPY and KRW have 0 decimals, and KWD and BHD have 3. Multiplying by 100 overcharges zero-decimal currencies 100x and undercharges three-decimal ones. Unless `Currency` is limited to 2-decimal currencies, take the conversion from the shared minor-unit logic by reusing `monthlyPriceMinor`. If the supported set really is 2-decimal only, document and enforce that with a type or an assertion."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 23,
+      "severity": "non-blocking",
+      "title": "Floating-point arithmetic for money",
+      "explanation": "`monthly * 12 * 0.9 * 100` uses binary floating point (0.9 is not exactly representable), and `Math.round` can land on the wrong side at exact half-cent boundaries. Do the calculation on integer minor units, for example `Math.round(monthlyMinor * 108 / 10)`, or use an integer-only helper with an explicit, documented rounding rule. The checkout display and the invoice must round identically, so both should call this one function."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 21,
+      "severity": "non-blocking",
+      "title": "No input validation for seats",
+      "explanation": "Zero, negative, fractional, NaN or very large `seats` values flow straight into the invoice amount. A fractional seat count produces a non-integer base that is then rounded silently. Validate that `seats` is a positive integer, either here or at the boundary, and confirm that matches the behavior of the monthly function."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 21,
+      "severity": "non-blocking",
+      "title": "No tests for the new pricing function",
+      "explanation": "This function determines what customers are billed. Add unit tests covering each plan and currency (including a zero-decimal currency if supported), a known expected value such as 10 seats of a plan, and rounding edge cases. Also assert that the annual price equals the monthly price times 10.8 in minor units, so the two stay consistent."
+    },
+    {
+      "file": "src/services/pricing.ts",
+      "line": 23,
+      "severity": "nit",
+      "title": "Magic numbers for months and discount",
+      "explanation": "`12` and `0.9` are inline. Name them, for example `ANNUAL_MONTHS = 12` and `ANNUAL_DISCOUNT_PERCENT = 10`, so the discount can be changed in one place and is easy to find. Better still, put the discount in the plan config if it may vary by plan."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/services/pricing.ts\", \"line\": 22, \"severity\": \"blocking\", \"title\": \"Annual price reimplements the monthly calculation instead of reusing monthlyPriceMinor\", \"explanation\": \"The PR says checkout and invoicing should compute the price the same way as the monthly price. But this reads `PLANS[plan].monthly[currency] * seats` directly and multiplies by 100 later, instead of calling `monthlyPriceMinor(plan, currency, seats)`. The existing function is named `...Minor`, so it already returns minor units. If `PLANS[...].monthly` is also stored in minor units, the `* 100` makes every annual invoice 100x too high. If it is stored in major units, the code duplicates whatever conversion and rounding `monthlyPriceMinor` does and can drift from it later (for example, if it adds per-seat tiers, minimums or taxes). Derive the annual price from the monthly function: `const monthlyMinor = monthlyPriceMinor(plan, currency, seats)`. This affects real invoices, so it should be fixed before launch.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 23, \"severity\": \"blocking\", \"title\": \"Hard-coded `* 100` is wrong for currencies without 2 decimal places\", \"explanation\": \"Minor-unit exponents differ by currency: JPY and KRW have 0 decimals, and KWD and BHD have 3. Multiplying by 100 overcharges zero-decimal currencies 100x and undercharges three-decimal ones. Unless `Currency` is limited to 2-decimal currencies, take the conversion from the shared minor-unit logic by reusing `monthlyPriceMinor`. If the supported set really is 2-decimal only, document and enforce that with a type or an assertion.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 23, \"severity\": \"non-blocking\", \"title\": \"Floating-point arithmetic for money\", \"explanation\": \"`monthly * 12 * 0.9 * 100` uses binary floating point (0.9 is not exactly representable), and `Math.round` can land on the wrong side at exact half-cent boundaries. Do the calculation on integer minor units, for example `Math.round(monthlyMinor * 108 / 10)`, or use an integer-only helper with an explicit, documented rounding rule. The checkout display and the invoice must round identically, so both should call this one function.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 21, \"severity\": \"non-blocking\", \"title\": \"No input validation for seats\", \"explanation\": \"Zero, negative, fractional, NaN or very large `seats` values flow straight into the invoice amount. A fractional seat count produces a non-integer base that is then rounded silently. Validate that `seats` is a positive integer, either here or at the boundary, and confirm that matches the behavior of the monthly function.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 21, \"severity\": \"non-blocking\", \"title\": \"No tests for the new pricing function\", \"explanation\": \"This function determines what customers are billed. Add unit tests covering each plan and currency (including a zero-decimal currency if supported), a known expected value such as 10 seats of a plan, and rounding edge cases. Also assert that the annual price equals the monthly price times 10.8 in minor units, so the two stay consistent.\"}, {\"file\": \"src/services/pricing.ts\", \"line\": 23, \"severity\": \"nit\", \"title\": \"Magic numbers for months and discount\", \"explanation\": \"`12` and `0.9` are inline. Name them, for example `ANNUAL_MONTHS = 12` and `ANNUAL_DISCOUNT_PERCENT = 10`, so the discount can be changed in one place and is easy to find. Better still, put the discount in the plan config if it may vary by plan.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add annual plan pricing\n\nAnnual billing launches next month: twelve months for the price of 10.8 (a 10% discount). Adds `annualPriceMinor` next to the monthly price so the checkout page and the invoice generator compute it the same way.\n\n## Diff\n\n```diff\ndiff --git a/src/services/pricing.ts b/src/services/pricing.ts\nindex 142a18d..f738804 100644\n--- a/src/services/pricing.ts\n+++ b/src/services/pricing.ts\n@@ -16,3 +16,9 @@ export function monthlyPriceMinor(plan: Plan, currency: Currency, seats: number)\n export function planLabel(plan: Plan): string {\n   return plan === 'team' ? 'Team' : 'Business'\n }\n+\n+// Annual billing: twelve months with a 10% discount, in minor units for the invoice.\n+export function annualPriceMinor(plan: Plan, currency: Currency, seats: number): number {\n+  const monthly = PLANS[plan].monthly[currency] * seats\n+  return Math.round(monthly * 12 * 0.9 * 100)\n+}\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

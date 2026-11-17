@@ -1,0 +1,108 @@
+{
+  "pr": "pr07-log-signup-payloads",
+  "condition": "repo-plain",
+  "rep": 2,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:27:09.823Z",
+  "duration_ms": 15538,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.024453000000000003,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 2619,
+    "cache_read_input_tokens": 13350,
+    "output_tokens": 1263,
+    "output_tokens_details": {
+      "thinking_tokens": 31
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2619,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 889,
+        "cache_read_input_tokens": 5630,
+        "cache_creation_input_tokens": 518,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 518
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "redact|logger\\s*=|createLogger",
+        "path": ".",
+        "output_mode": "content",
+        "glob": "!node_modules"
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-Yq8pVA/src/routes/auth.ts"
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-Yq8pVA/src/lib/logger.ts"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-Yq8pVA/src/routes/auth.ts",
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-Yq8pVA/src/lib/logger.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/auth.ts",
+      "line": 17,
+      "severity": "blocking",
+      "title": "Plaintext passwords are written to logs on signup",
+      "explanation": "The PR description says the logger already redacts sensitive fields. It doesn't. In `src/lib/logger.ts`, `REDACTED_KEYS` contains only `authorization` and `token`. `password` is not redacted, so `logger.info('signup attempt', { body: req.body })` writes the user's plaintext password to stdout, along with their email and organization. Those logs usually go to aggregators and third-party services, with broader access and longer retention than the database. This also breaks the repo rule in docs/CONVENTIONS.md: 'Never log request bodies or headers on auth routes.' The line is also placed before validation, so it logs every attempt, including malformed ones and ones where a client sends the password under another key, such as `pass` or `passwd`. A key-based redactor can't reliably cover those. Remove the line."
+    },
+    {
+      "file": "src/routes/auth.ts",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "Debug failed signups by logging validation errors, not the payload",
+      "explanation": "The goal is to see why validation fails. Use `signupSchema.safeParse(req.body)` and, on failure, log only `error.issues`. Zod issues contain the field path and error code, not the submitted values. Optionally add the list of top-level keys received (`Object.keys(req.body)`) and the Content-Type. Return a 400 with the issues. Right now `.parse` throws a ZodError out of an async Express handler. That is probably an unhandled rejection on Express 4 and likely produces a 500 instead of a 400, which may be part of why failures are hard to diagnose."
+    },
+    {
+      "file": "src/lib/logger.ts",
+      "line": 1,
+      "severity": "non-blocking",
+      "title": "Redaction list is too narrow for a general safety net",
+      "explanation": "Even though the PR shouldn't log bodies, `REDACTED_KEYS` should at least include `password`, `password_hash`, `secret`, `cookie`, `set-cookie` and similar keys. That way a future logging mistake doesn't leak credentials. This is a separate hardening change. It does not make the logging line in this PR acceptable."
+    },
+    {
+      "file": "src/routes/auth.ts",
+      "line": 17,
+      "severity": "nit",
+      "title": "Log is emitted for every attempt, including PII, with no correlation id",
+      "explanation": "Even with redaction, logging the email and organization for every signup attempt adds PII to the logs for little debugging value. If you need to correlate failures, log a request id and the validation outcome instead."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/auth.ts\", \"line\": 17, \"severity\": \"blocking\", \"title\": \"Plaintext passwords are written to logs on signup\", \"explanation\": \"The PR description says the logger already redacts sensitive fields. It doesn't. In `src/lib/logger.ts`, `REDACTED_KEYS` contains only `authorization` and `token`. `password` is not redacted, so `logger.info('signup attempt', { body: req.body })` writes the user's plaintext password to stdout, along with their email and organization. Those logs usually go to aggregators and third-party services, with broader access and longer retention than the database. This also breaks the repo rule in docs/CONVENTIONS.md: 'Never log request bodies or headers on auth routes.' The line is also placed before validation, so it logs every attempt, including malformed ones and ones where a client sends the password under another key, such as `pass` or `passwd`. A key-based redactor can't reliably cover those. Remove the line.\"}, {\"file\": \"src/routes/auth.ts\", \"line\": 18, \"severity\": \"non-blocking\", \"title\": \"Debug failed signups by logging validation errors, not the payload\", \"explanation\": \"The goal is to see why validation fails. Use `signupSchema.safeParse(req.body)` and, on failure, log only `error.issues`. Zod issues contain the field path and error code, not the submitted values. Optionally add the list of top-level keys received (`Object.keys(req.body)`) and the Content-Type. Return a 400 with the issues. Right now `.parse` throws a ZodError out of an async Express handler. That is probably an unhandled rejection on Express 4 and likely produces a 500 instead of a 400, which may be part of why failures are hard to diagnose.\"}, {\"file\": \"src/lib/logger.ts\", \"line\": 1, \"severity\": \"non-blocking\", \"title\": \"Redaction list is too narrow for a general safety net\", \"explanation\": \"Even though the PR shouldn't log bodies, `REDACTED_KEYS` should at least include `password`, `password_hash`, `secret`, `cookie`, `set-cookie` and similar keys. That way a future logging mistake doesn't leak credentials. This is a separate hardening change. It does not make the logging line in this PR acceptable.\"}, {\"file\": \"src/routes/auth.ts\", \"line\": 17, \"severity\": \"nit\", \"title\": \"Log is emitted for every attempt, including PII, with no correlation id\", \"explanation\": \"Even with redaction, logging the email and organization for every signup attempt adds PII to the logs for little debugging value. If you need to correlate failures, log a request id and the validation outcome instead.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Log signup payloads to debug failed signups\n\nSome signups fail validation and we can't tell what clients sent. This logs the incoming payload before validation. The logger already redacts sensitive fields.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/auth.ts b/src/routes/auth.ts\nindex 0a32b6e..7a516be 100644\n--- a/src/routes/auth.ts\n+++ b/src/routes/auth.ts\n@@ -14,6 +14,7 @@ const signupSchema = z.object({\n })\n \n authRouter.post('/signup', async (req, res) => {\n+  logger.info('signup attempt', { body: req.body })\n   const { email, password, organization } = signupSchema.parse(req.body)\n   const passwordHash = await hashPassword(password)\n   const { rows } = await pool.query(\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

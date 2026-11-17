@@ -1,0 +1,32 @@
+diff --git a/src/routes/coupons.ts b/src/routes/coupons.ts
+index c792f9c..7cceb2a 100644
+--- a/src/routes/coupons.ts
++++ b/src/routes/coupons.ts
+@@ -9,18 +9,18 @@ const redeemSchema = z.object({ code: z.string().min(3).max(64) })
+ couponsRouter.post('/redeem', async (req, res) => {
+   const { code } = redeemSchema.parse(req.body)
+   const result = await withTransaction(async (client) => {
+-    // One atomic statement: the row is only updated while redemptions remain.
+-    const updated = await client.query(
+-      `UPDATE coupons SET redemptions = redemptions + 1
+-        WHERE code = $1 AND redemptions < max_redemptions
+-          AND (expires_at IS NULL OR expires_at > now())
+-        RETURNING percent_off`,
++    const { rows } = await client.query(
++      'SELECT percent_off, max_redemptions, redemptions, expires_at FROM coupons WHERE code = $1',
+       [code],
+     )
+-    if (updated.rowCount === 0) return null
++    const coupon = rows[0]
++    if (!coupon) return { error: 'coupon_not_found' as const }
++    if (coupon.expires_at && coupon.expires_at <= new Date()) return { error: 'coupon_expired' as const }
++    if (coupon.redemptions >= coupon.max_redemptions) return { error: 'coupon_used_up' as const }
++    await client.query('UPDATE coupons SET redemptions = redemptions + 1 WHERE code = $1', [code])
+     await client.query('INSERT INTO coupon_redemptions (code, org_id) VALUES ($1, $2)', [code, req.user.orgId])
+-    return updated.rows[0]
++    return { percent_off: coupon.percent_off as number }
+   })
+-  if (!result) return res.status(409).json({ error: 'coupon_unavailable' })
++  if ('error' in result) return res.status(409).json({ error: result.error })
+   res.json({ percent_off: result.percent_off })
+ })

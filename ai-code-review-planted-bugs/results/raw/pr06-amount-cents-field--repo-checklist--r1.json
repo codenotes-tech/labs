@@ -1,0 +1,103 @@
+{
+  "pr": "pr06-amount-cents-field",
+  "condition": "repo-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:27:43.071Z",
+  "duration_ms": 13261,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.020985,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 2320,
+    "cache_read_input_tokens": 13430,
+    "output_tokens": 1035,
+    "output_tokens_details": {
+      "thinking_tokens": 29
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2320,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 623,
+        "cache_read_input_tokens": 5485,
+        "cache_creation_input_tokens": 477,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 477
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-VCWaUb/src/serializers/invoice.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "amount",
+        "output_mode": "content",
+        "-n": true,
+        "head_limit": 100
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "invoice\\.amount|\\.amount\\b|amount:",
+        "glob": "**/*.{ts,tsx,js,md,json,yaml,yml}",
+        "output_mode": "content",
+        "-n": true
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-VCWaUb/src/serializers/invoice.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Breaking API rename without updating the in-repo web client",
+      "explanation": "The response field `amount` is renamed to `amount_cents`, but `web/src/api/invoices.ts` still types the field as `amount`, and `web/src/components/InvoiceRow.tsx:10` still renders `invoice.amount / 100`. After this change `invoice.amount` is `undefined`, so the UI shows `NaN` (formatted as 'NaN' or '$NaN') for every invoice. Update the web type and component in this PR (`amount_cents`)."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Hard rename breaks existing external API consumers and rolling deploys",
+      "explanation": "Removing `amount` outright breaks any API client, integration, or cached frontend bundle that still reads it. During a rolling deploy, old frontend or clients hitting new backends will break. Return both `amount` (marked deprecated) and `amount_cents` for a deprecation window, or version the API. Remove `amount` once consumers have migrated. Document the change in the changelog or API docs."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "nit",
+      "title": "Internal naming is still ambiguous and Number() on BIGINT is imprecise",
+      "explanation": "The DB column and `InvoiceRow.amount` are still named `amount`, so the ambiguity remains internally (`payments.ts` also passes `amount` to the provider). Consider aliasing in the SQL (`amount AS amount_cents`) and renaming the row field. Also, `Number()` on a BIGINT loses precision above 2^53. This is unlikely for cents, but worth noting."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Breaking API rename without updating the in-repo web client\", \"explanation\": \"The response field `amount` is renamed to `amount_cents`, but `web/src/api/invoices.ts` still types the field as `amount`, and `web/src/components/InvoiceRow.tsx:10` still renders `invoice.amount / 100`. After this change `invoice.amount` is `undefined`, so the UI shows `NaN` (formatted as 'NaN' or '$NaN') for every invoice. Update the web type and component in this PR (`amount_cents`).\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Hard rename breaks existing external API consumers and rolling deploys\", \"explanation\": \"Removing `amount` outright breaks any API client, integration, or cached frontend bundle that still reads it. During a rolling deploy, old frontend or clients hitting new backends will break. Return both `amount` (marked deprecated) and `amount_cents` for a deprecation window, or version the API. Remove `amount` once consumers have migrated. Document the change in the changelog or API docs.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"nit\", \"title\": \"Internal naming is still ambiguous and Number() on BIGINT is imprecise\", \"explanation\": \"The DB column and `InvoiceRow.amount` are still named `amount`, so the ambiguity remains internally (`payments.ts` also passes `amount` to the provider). Consider aliasing in the SQL (`amount AS amount_cents`) and renaming the row field. Also, `Number()` on a BIGINT loses precision above 2^53. This is unlikely for cents, but worth noting.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Rename invoice amount to amount_cents\n\n`amount` is ambiguous: people reading the API assume dollars. This renames the response field to `amount_cents` so the unit is explicit.\n\n## Diff\n\n```diff\ndiff --git a/src/serializers/invoice.ts b/src/serializers/invoice.ts\nindex 653d75e..9e281b3 100644\n--- a/src/serializers/invoice.ts\n+++ b/src/serializers/invoice.ts\n@@ -11,7 +11,7 @@ export interface InvoiceRow {\n export function serializeInvoice(row: InvoiceRow) {\n   return {\n     id: row.id,\n-    amount: Number(row.amount),\n+    amount_cents: Number(row.amount),\n     currency: row.currency,\n     status: row.status,\n     period_start: row.period_start.toISOString(),\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

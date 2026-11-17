@@ -1,0 +1,107 @@
+{
+  "pr": "pr03-events-project-index",
+  "condition": "repo-plain",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:28:51.361Z",
+  "duration_ms": 14277,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 4,
+  "cost_usd": 0.0290307,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 3879,
+    "cache_read_input_tokens": 14527,
+    "output_tokens": 1205,
+    "output_tokens_details": {
+      "thinking_tokens": 30
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 3879,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 902,
+        "cache_read_input_tokens": 6985,
+        "cache_creation_input_tokens": 335,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 335
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Glob",
+      "input": {
+        "pattern": "**/*"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "events",
+        "output_mode": "content",
+        "-n": true,
+        "head_limit": 80
+      }
+    },
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-XvtAkg/migrations/004_events.sql"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-XvtAkg/migrations/004_events.sql"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "blocking",
+      "title": "Index on a ~400M-row table is not created CONCURRENTLY",
+      "explanation": "docs/CONVENTIONS.md says indexes on `events`, which has about 400 million rows, must use `CREATE INDEX CONCURRENTLY`. A plain `CREATE INDEX` takes a SHARE lock on the table for the whole build. That blocks every INSERT, UPDATE and DELETE on `events`, so event writes would stall for the duration of the build, which could be minutes to hours on a table this size. Change the statement to `CREATE INDEX CONCURRENTLY events_project_id_idx ON events (project_id, id DESC);`."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "blocking",
+      "title": "Missing `-- migrate:no-transaction` header",
+      "explanation": "`CREATE INDEX CONCURRENTLY` cannot run inside a transaction block, and the migration runner wraps migrations in one by default. The convention, and `004_events.sql`, put `-- migrate:no-transaction` on the first line of the file. Without it, the concurrent build fails once the first fix is applied. Add the header as line 1."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "non-blocking",
+      "title": "Make the migration safe to re-run after a failed concurrent build",
+      "explanation": "A failed `CREATE INDEX CONCURRENTLY` leaves an INVALID index behind under the same name. A retry then fails with 'relation already exists'. Consider `CREATE INDEX CONCURRENTLY IF NOT EXISTS`, and add a note in the PR on how to check for and drop an invalid index (`DROP INDEX CONCURRENTLY events_project_id_idx`) before retrying."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "nit",
+      "title": "Index is correct for the query; consider noting the NULL project_id rows",
+      "explanation": "The index (project_id, id DESC) matches `WHERE project_id = $1 ORDER BY id DESC LIMIT 100` in src/routes/projects.ts, so the index choice itself is fine. `project_id` is nullable, and many events probably have no project. Those rows would bloat the index. A partial index with `WHERE project_id IS NOT NULL` would be smaller. Optional. It would also be useful to put EXPLAIN output or timing numbers in the PR description to back up the speed-up claim."
+    }
+  ],
+  "result_text": "```json\n{\"findings\": [{\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"blocking\", \"title\": \"Index on a ~400M-row table is not created CONCURRENTLY\", \"explanation\": \"docs/CONVENTIONS.md says indexes on `events`, which has about 400 million rows, must use `CREATE INDEX CONCURRENTLY`. A plain `CREATE INDEX` takes a SHARE lock on the table for the whole build. That blocks every INSERT, UPDATE and DELETE on `events`, so event writes would stall for the duration of the build, which could be minutes to hours on a table this size. Change the statement to `CREATE INDEX CONCURRENTLY events_project_id_idx ON events (project_id, id DESC);`.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"blocking\", \"title\": \"Missing `-- migrate:no-transaction` header\", \"explanation\": \"`CREATE INDEX CONCURRENTLY` cannot run inside a transaction block, and the migration runner wraps migrations in one by default. The convention, and `004_events.sql`, put `-- migrate:no-transaction` on the first line of the file. Without it, the concurrent build fails once the first fix is applied. Add the header as line 1.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"non-blocking\", \"title\": \"Make the migration safe to re-run after a failed concurrent build\", \"explanation\": \"A failed `CREATE INDEX CONCURRENTLY` leaves an INVALID index behind under the same name. A retry then fails with 'relation already exists'. Consider `CREATE INDEX CONCURRENTLY IF NOT EXISTS`, and add a note in the PR on how to check for and drop an invalid index (`DROP INDEX CONCURRENTLY events_project_id_idx`) before retrying.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"nit\", \"title\": \"Index is correct for the query; consider noting the NULL project_id rows\", \"explanation\": \"The index (project_id, id DESC) matches `WHERE project_id = $1 ORDER BY id DESC LIMIT 100` in src/routes/projects.ts, so the index choice itself is fine. `project_id` is nullable, and many events probably have no project. Those rows would bloat the index. A partial index with `WHERE project_id IS NOT NULL` would be smaller. Optional. It would also be useful to put EXPLAIN output or timing numbers in the PR description to back up the speed-up claim.\"}]}\n```",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Speed up the project activity feed\n\nThe project events endpoint does a sequential scan per project. Adds an index on `events (project_id, id DESC)` to match the query.\n\n## Diff\n\n```diff\ndiff --git a/migrations/005_events_project_idx.sql b/migrations/005_events_project_idx.sql\nnew file mode 100644\nindex 0000000..0586576\n--- /dev/null\n+++ b/migrations/005_events_project_idx.sql\n@@ -0,0 +1 @@\n+CREATE INDEX events_project_id_idx ON events (project_id, id DESC);\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

@@ -1,0 +1,83 @@
+{
+  "pr": "pr12-document-env-vars",
+  "condition": "diff-plain",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:28:00.817Z",
+  "duration_ms": 15273,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0162872,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 663,
+    "cache_read_input_tokens": 912,
+    "output_tokens": 1354,
+    "output_tokens_details": {
+      "thinking_tokens": 606
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 663,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 1354,
+        "cache_read_input_tokens": 912,
+        "cache_creation_input_tokens": 663,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 663
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "README.md",
+      "line": 18,
+      "severity": "non-blocking",
+      "title": "Default for PAYMENT_PROVIDER_URL looks like a placeholder",
+      "explanation": "`https://api.payments.example` uses the reserved `.example` TLD, which never resolves. If the code really falls back to this value, a deployment that forgets to set the variable will fail at runtime instead of at startup. Confirm this is the real default in `src/lib/provider.ts`. If it is a placeholder, make the variable required, or document the real production and sandbox URLs. Production should not silently default to a non-routable host."
+    },
+    {
+      "file": "README.md",
+      "line": 14,
+      "severity": "non-blocking",
+      "title": "Documented variables and defaults could not be checked against the source",
+      "explanation": "The PR claims to list every variable the API reads, with its defaults. The table cannot be checked from the diff alone, so the author should confirm that it matches `src/db.ts`, `src/server.ts` and `src/lib/provider.ts`, and that no other `process.env.*` reads exist (for example `NODE_ENV`, `LOG_LEVEL`, or a webhook secret). A grep for `process.env` in the PR description would show the list is complete. An incomplete or wrong table is worse than none."
+    },
+    {
+      "file": "README.md",
+      "line": 19,
+      "severity": "nit",
+      "title": "Table does not describe the variables or mark secrets",
+      "explanation": "The table gives names and defaults but no description or format. Add a short note on what each variable is for, the expected format (for example a Postgres connection string for `DATABASE_URL`), and that `DATABASE_URL` and `PAYMENT_PROVIDER_KEY` are secrets that must come from the secret store and never be committed. Also mention the `.env` or example file if one exists."
+    },
+    {
+      "file": "README.md",
+      "line": 12,
+      "severity": "nit",
+      "title": "Configuration section sits before 'Running locally' with no link to it",
+      "explanation": "Because deploys are rolling, with old and new versions serving traffic together, the docs should state that any new required variable must be set before the release rolls out. Otherwise new instances will fail on startup. A one-line note under the table would help, as would a pointer from 'Running locally' to this section."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"README.md\", \"line\": 18, \"severity\": \"non-blocking\", \"title\": \"Default for PAYMENT_PROVIDER_URL looks like a placeholder\", \"explanation\": \"`https://api.payments.example` uses the reserved `.example` TLD, which never resolves. If the code really falls back to this value, a deployment that forgets to set the variable will fail at runtime instead of at startup. Confirm this is the real default in `src/lib/provider.ts`. If it is a placeholder, make the variable required, or document the real production and sandbox URLs. Production should not silently default to a non-routable host.\"}, {\"file\": \"README.md\", \"line\": 14, \"severity\": \"non-blocking\", \"title\": \"Documented variables and defaults could not be checked against the source\", \"explanation\": \"The PR claims to list every variable the API reads, with its defaults. The table cannot be checked from the diff alone, so the author should confirm that it matches `src/db.ts`, `src/server.ts` and `src/lib/provider.ts`, and that no other `process.env.*` reads exist (for example `NODE_ENV`, `LOG_LEVEL`, or a webhook secret). A grep for `process.env` in the PR description would show the list is complete. An incomplete or wrong table is worse than none.\"}, {\"file\": \"README.md\", \"line\": 19, \"severity\": \"nit\", \"title\": \"Table does not describe the variables or mark secrets\", \"explanation\": \"The table gives names and defaults but no description or format. Add a short note on what each variable is for, the expected format (for example a Postgres connection string for `DATABASE_URL`), and that `DATABASE_URL` and `PAYMENT_PROVIDER_KEY` are secrets that must come from the secret store and never be committed. Also mention the `.env` or example file if one exists.\"}, {\"file\": \"README.md\", \"line\": 12, \"severity\": \"nit\", \"title\": \"Configuration section sits before 'Running locally' with no link to it\", \"explanation\": \"Because deploys are rolling, with old and new versions serving traffic together, the docs should state that any new required variable must be set before the release rolls out. Otherwise new instances will fail on startup. A one-line note under the table would help, as would a pointer from 'Running locally' to this section.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Document environment variables\n\nLists the environment variables the API reads, with their defaults.\n\n## Diff\n\n```diff\ndiff --git a/README.md b/README.md\nindex c454bb1..9513c3f 100644\n--- a/README.md\n+++ b/README.md\n@@ -9,6 +9,15 @@ Billing API for Acme's project management product: organizations, projects, invo\n \n Deploys are rolling: old and new versions of the API serve traffic together during a release.\n \n+## Configuration\n+\n+| Variable | Required | Default | Used by |\n+| --- | --- | --- | --- |\n+| `DATABASE_URL` | yes | none | `src/db.ts` |\n+| `PORT` | no | `3000` | `src/server.ts` |\n+| `PAYMENT_PROVIDER_URL` | no | `https://api.payments.example` | `src/lib/provider.ts` |\n+| `PAYMENT_PROVIDER_KEY` | yes | none | `src/lib/provider.ts` |\n+\n ## Running locally\n \n ```bash\n```\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

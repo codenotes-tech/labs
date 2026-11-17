@@ -1,0 +1,36 @@
+{
+  "registered_at": "2026-11-17T17:18:17.879Z",
+  "note": "Fingerprints of the answer key, PR definitions, scoring rules, and prompts, recorded before any review was run. Any later change to these files is listed under changes_after_registration with a reason.",
+  "sha256": {
+    "prs/answer-key.json": "052acdc289ee2adae1c20f593bd73c5677150a54e843f0b544cf2679fe0c5c8c",
+    "prs/definitions.mjs": "7d4d210823157cec6d80655178fef21f1aba6b02efe0ba70803aa50e98132dfb",
+    "score.mjs": "05c3e3a6b8908a4bc31825987c0bb8adcadd6b1de2577c14015e6667c52412dd",
+    "prompts/system.txt": "97933770793cffc2aca4f63340591b539bcc2fd467fdca1261a99359bed55418",
+    "prompts/review.txt": "a6593c1a6d4af838e9df98f98dd87d404a1eb1e9490039387ea42ab14ae6f18b",
+    "prompts/repo-note.txt": "b5ab68c73828f51e0b1ad301b538f99ec1c27b6968c8bb461b477155d104132c",
+    "prompts/checklist.txt": "b807f4702a5c67166140324ea91bcbf96b300d31db162dc4b18400f092563cb2"
+  },
+  "changes_after_registration": [
+    {
+      "at": "2026-11-17T17:19:13.471Z",
+      "file": "prompts/review.txt",
+      "sha256": "7bf329ba8c53c104da82f54083ad284341a7b594df1794845ca5dc578f31a81a",
+      "change": "Added \"Write the review in English.\" to the end of the instructions.",
+      "reason": "A tools probe outside the experiment answered in Ukrainian (the Mac is set to en-UA/uk-UA). The four smoke-test reviews were in English, but English output is needed for keyword scoring, so the instruction was made explicit before the full run. The smoke-test reviews were deleted; no review used for results ran with the earlier prompt."
+    },
+    {
+      "at": "2026-11-17T17:33:49.770Z",
+      "file": "score.mjs",
+      "sha256": "39cdfe2143cd7e801361e7d8cbf7db77ca9c072a1c7a70308ea6e241b9c08927",
+      "change": "Added a --set option so the same script scores the follow-up set (paths for the answer key, raw reviews, and outputs), and replaced the hard-coded bug counts in the summary table with counts from the answer key.",
+      "reason": "Needed to score the follow-up set with identical rules. The matching rules (file + keyword, severity, line distance, noise, overrides) are unchanged; re-scoring the main set reproduces the same numbers."
+    },
+    {
+      "at": "2026-11-17T17:39:11.047Z",
+      "file": "score.mjs",
+      "sha256": "10bd058620ae4dec475155cbd7adb99b50094a7107d11cc096c43224b02864bc",
+      "change": "Display only: the summary header names the actual raw folder, and file paths in scored.csv are shown relative to the checkout (macOS reported them under /private/var).",
+      "reason": "Readability of the published outputs. Matching rules and all scores are unchanged."
+    }
+  ]
+}

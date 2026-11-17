@@ -1,0 +1,104 @@
+{
+  "pr": "pr13-invoice-pdf-download",
+  "condition": "diff-checklist",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:35:47.825Z",
+  "duration_ms": 23532,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.0294786,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 657,
+    "cache_read_input_tokens": 1466,
+    "output_tokens": 2670,
+    "output_tokens_details": {
+      "thinking_tokens": 1258
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 657,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 2670,
+        "cache_read_input_tokens": 1466,
+        "cache_creation_input_tokens": 657,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 657
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 56,
+      "severity": "non-blocking",
+      "title": "Date formatting via toISOString can shift the day",
+      "explanation": "If period_start and period_end are DATE columns, node-pg parses them as local-midnight Date objects. toISOString() converts to UTC, so on a server whose timezone is ahead of UTC the printed date is one day early. This is an accounting document, so the dates must be correct. Format with the same timezone the value was parsed in, or cast in SQL (`to_char(i.period_start, 'YYYY-MM-DD')` or `i.period_start::text`) and print the string. Also confirm whether period_end is inclusive or exclusive so the 'to' date is not misleading."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 58,
+      "severity": "non-blocking",
+      "title": "status and currency are interpolated into HTML without escaping",
+      "explanation": "org_name is escaped, but invoice.status and invoice.currency go in raw. They are probably constrained values today, but nothing here guarantees that, and a future free-form value or a data import would become stored XSS on an authenticated origin. Escape every interpolated value, including `invoice.id` and `amount`, or use a small template helper that escapes by default."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 52,
+      "severity": "non-blocking",
+      "title": "Amount formatting assumes 2-decimal currencies",
+      "explanation": "Dividing by 100 and calling toFixed(2) is wrong for zero-decimal currencies (JPY, KRW) and three-decimal ones (KWD, BHD). It also goes through floating point, and Number() on a bigint/numeric string can lose precision. Use the minor-unit exponent for the currency, for example `Intl.NumberFormat` with the currency's fraction digits, or reuse whatever `serializeInvoice` does, so the printed amount matches the API and the rest of the product."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 48,
+      "severity": "non-blocking",
+      "title": "Non-numeric invoiceId produces a DB error instead of 404",
+      "explanation": "`Number('abc')` is NaN, which Postgres rejects when it is compared with an integer column. In Express 4 an unhandled rejection in an async handler can leave the request hanging or return a 500. Validate with `Number.isInteger(id)` and return 404 or 400, and make sure the handler is wrapped in the project's async error handling. Check whether the existing `/:invoiceId` route has the same issue and fix both consistently."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 53,
+      "severity": "non-blocking",
+      "title": "Missing response headers for a sensitive HTML document",
+      "explanation": "Financial data is returned with no Cache-Control, so shared proxies or browsers may cache it. Add `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`, and a restrictive `Content-Security-Policy` (for example `default-src 'none'; style-src 'unsafe-inline'`). This is cheap defense in depth for a page that renders DB content. Consider `Content-Disposition` if a download is intended, as the PR title says 'download'."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 43,
+      "severity": "non-blocking",
+      "title": "No tests for the new endpoint",
+      "explanation": "There is no test coverage for the tenant isolation (another org's invoice returns 404), the not-found path, HTML escaping of org_name, or date and amount formatting. Tenant isolation in particular should have a regression test, since it is the main security property of this route."
+    },
+    {
+      "file": "src/routes/invoices.ts",
+      "line": 54,
+      "severity": "nit",
+      "title": "Minimal HTML is not really print-ready",
+      "explanation": "The page has no `<html lang>`, `<meta charset>`, `<title>`, or print stylesheet, and it omits useful invoice fields such as line items, issue date, and customer details. It is fine for a first iteration, but consider a small shared template. Also consider extracting the query into a shared data-access function instead of duplicating the SELECT/org scoping from the JSON route."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"src/routes/invoices.ts\", \"line\": 56, \"severity\": \"non-blocking\", \"title\": \"Date formatting via toISOString can shift the day\", \"explanation\": \"If period_start and period_end are DATE columns, node-pg parses them as local-midnight Date objects. toISOString() converts to UTC, so on a server whose timezone is ahead of UTC the printed date is one day early. This is an accounting document, so the dates must be correct. Format with the same timezone the value was parsed in, or cast in SQL (`to_char(i.period_start, 'YYYY-MM-DD')` or `i.period_start::text`) and print the string. Also confirm whether period_end is inclusive or exclusive so the 'to' date is not misleading.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 58, \"severity\": \"non-blocking\", \"title\": \"status and currency are interpolated into HTML without escaping\", \"explanation\": \"org_name is escaped, but invoice.status and invoice.currency go in raw. They are probably constrained values today, but nothing here guarantees that, and a future free-form value or a data import would become stored XSS on an authenticated origin. Escape every interpolated value, including `invoice.id` and `amount`, or use a small template helper that escapes by default.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 52, \"severity\": \"non-blocking\", \"title\": \"Amount formatting assumes 2-decimal currencies\", \"explanation\": \"Dividing by 100 and calling toFixed(2) is wrong for zero-decimal currencies (JPY, KRW) and three-decimal ones (KWD, BHD). It also goes through floating point, and Number() on a bigint/numeric string can lose precision. Use the minor-unit exponent for the currency, for example `Intl.NumberFormat` with the currency's fraction digits, or reuse whatever `serializeInvoice` does, so the printed amount matches the API and the rest of the product.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 48, \"severity\": \"non-blocking\", \"title\": \"Non-numeric invoiceId produces a DB error instead of 404\", \"explanation\": \"`Number('abc')` is NaN, which Postgres rejects when it is compared with an integer column. In Express 4 an unhandled rejection in an async handler can leave the request hanging or return a 500. Validate with `Number.isInteger(id)` and return 404 or 400, and make sure the handler is wrapped in the project's async error handling. Check whether the existing `/:invoiceId` route has the same issue and fix both consistently.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 53, \"severity\": \"non-blocking\", \"title\": \"Missing response headers for a sensitive HTML document\", \"explanation\": \"Financial data is returned with no Cache-Control, so shared proxies or browsers may cache it. Add `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`, and a restrictive `Content-Security-Policy` (for example `default-src 'none'; style-src 'unsafe-inline'`). This is cheap defense in depth for a page that renders DB content. Consider `Content-Disposition` if a download is intended, as the PR title says 'download'.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 43, \"severity\": \"non-blocking\", \"title\": \"No tests for the new endpoint\", \"explanation\": \"There is no test coverage for the tenant isolation (another org's invoice returns 404), the not-found path, HTML escaping of org_name, or date and amount formatting. Tenant isolation in particular should have a regression test, since it is the main security property of this route.\"}, {\"file\": \"src/routes/invoices.ts\", \"line\": 54, \"severity\": \"nit\", \"title\": \"Minimal HTML is not really print-ready\", \"explanation\": \"The page has no `<html lang>`, `<meta charset>`, `<title>`, or print stylesheet, and it omits useful invoice fields such as line items, issue date, and customer details. It is fine for a first iteration, but consider a small shared template. Also consider extracting the query into a shared data-access function instead of duplicating the SELECT/org scoping from the JSON route.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Add printable invoice download\n\nCustomers want a printable copy of an invoice for their accounting team. Adds `GET /invoices/:invoiceId/print`, which returns a simple HTML invoice. Scoped to the caller's organization like the other invoice routes.\n\n## Diff\n\n```diff\ndiff --git a/src/routes/invoices.ts b/src/routes/invoices.ts\nindex 938fffd..04598f2 100644\n--- a/src/routes/invoices.ts\n+++ b/src/routes/invoices.ts\n@@ -39,3 +39,25 @@ invoicesRouter.get('/:invoiceId', async (req, res) => {\n   if (!rows[0]) return res.status(404).json({ error: 'not_found' })\n   res.json(serializeInvoice(rows[0]))\n })\n+\n+invoicesRouter.get('/:invoiceId/print', async (req, res) => {\n+  const { rows } = await pool.query(\n+    `SELECT i.id, i.amount, i.currency, i.status, i.period_start, i.period_end, o.name AS org_name\n+       FROM invoices i JOIN organizations o ON o.id = i.org_id\n+      WHERE i.id = $1 AND i.org_id = $2`,\n+    [Number(req.params.invoiceId), req.user.orgId],\n+  )\n+  const invoice = rows[0]\n+  if (!invoice) return res.status(404).json({ error: 'not_found' })\n+  const amount = (Number(invoice.amount) / 100).toFixed(2)\n+  res.type('html').send(`<!doctype html>\n+<h1>Invoice #${invoice.id}</h1>\n+<p>${escapeHtml(invoice.org_name)}</p>\n+<p>Period: ${invoice.period_start.toISOString().slice(0, 10)} to ${invoice.period_end.toISOString().slice(0, 10)}</p>\n+<p>Amount due: ${amount} ${invoice.currency.toUpperCase()}</p>\n+<p>Status: ${invoice.status}</p>`)\n+})\n+\n+function escapeHtml(value: string): string {\n+  return value.replace(/[&<>\"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' })[c] as string)\n+}\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

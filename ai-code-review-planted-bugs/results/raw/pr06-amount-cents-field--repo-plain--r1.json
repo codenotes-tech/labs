@@ -1,0 +1,116 @@
+{
+  "pr": "pr06-amount-cents-field",
+  "condition": "repo-plain",
+  "rep": 1,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:24:22.702Z",
+  "duration_ms": 16748,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 5,
+  "cost_usd": 0.026354100000000002,
+  "usage": {
+    "input_tokens": 6,
+    "cache_creation_input_tokens": 3092,
+    "cache_read_input_tokens": 12341,
+    "output_tokens": 1274,
+    "output_tokens_details": {
+      "thinking_tokens": 28
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 3092,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 786,
+        "cache_read_input_tokens": 5372,
+        "cache_creation_input_tokens": 498,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 498
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [
+    {
+      "tool": "Read",
+      "input": {
+        "file_path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-QLdmXi/src/serializers/invoice.ts"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "amount",
+        "output_mode": "content",
+        "-n": true,
+        "head_limit": 100
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "invoice\\.amount|\\.amount\\b|amount:",
+        "path": "/private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-QLdmXi/web",
+        "output_mode": "content"
+      }
+    },
+    {
+      "tool": "Grep",
+      "input": {
+        "pattern": "serializeInvoice",
+        "output_mode": "content"
+      }
+    }
+  ],
+  "files_read": [
+    "../../../../../../private/var/folders/f3/mny9zyh12wb6xfpkjcwgsvy40000gn/T/review-QLdmXi/src/serializers/invoice.ts"
+  ],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "web/src/components/InvoiceRow.tsx",
+      "line": 10,
+      "severity": "blocking",
+      "title": "Frontend still reads `invoice.amount`, which the API no longer returns",
+      "explanation": "The serializer now returns `amount_cents` and no longer returns `amount`. The web client in this repo still reads `invoice.amount`. `web/src/api/invoices.ts:4` declares `amount: number // cents`, and `InvoiceRow.tsx:10` computes `invoice.amount / 100`. After this change `invoice.amount` is `undefined`, so the invoice table renders `$NaN`. TypeScript can't catch it, because the client type is hand-written and not derived from the serializer. Update the `Invoice` type in `web/src/api/invoices.ts` to `amount_cents`, and update `InvoiceRow.tsx` to use `invoice.amount_cents / 100`."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "blocking",
+      "title": "Breaking API change with no compatibility or versioning plan",
+      "explanation": "Renaming a field in a production API response breaks every external or older consumer at deploy time, including mobile apps, integrations, and cached frontend bundles. The frontend and backend can't be deployed atomically. Either emit both `amount` and `amount_cents` for a deprecation period and then remove `amount`, or version the endpoint. Document the change and coordinate it with the consumers."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 3,
+      "severity": "nit",
+      "title": "Internal naming is still ambiguous",
+      "explanation": "`InvoiceRow.amount` and the DB column `amount` hold cents (see the migration comment), but the name doesn't say so. This is the ambiguity the PR sets out to remove. Consider a comment on the field, or a follow-up migration to rename the column. `payments.amount` has the same problem. This isn't required for this PR."
+    },
+    {
+      "file": "src/serializers/invoice.ts",
+      "line": 14,
+      "severity": "nit",
+      "title": "No test covers the serializer's response shape",
+      "explanation": "Nothing checks the contract that this change alters. Add or update a serializer or route test that asserts `amount_cents` is present and `amount` is absent, or that both are present if you add a deprecation period."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"web/src/components/InvoiceRow.tsx\", \"line\": 10, \"severity\": \"blocking\", \"title\": \"Frontend still reads `invoice.amount`, which the API no longer returns\", \"explanation\": \"The serializer now returns `amount_cents` and no longer returns `amount`. The web client in this repo still reads `invoice.amount`. `web/src/api/invoices.ts:4` declares `amount: number // cents`, and `InvoiceRow.tsx:10` computes `invoice.amount / 100`. After this change `invoice.amount` is `undefined`, so the invoice table renders `$NaN`. TypeScript can't catch it, because the client type is hand-written and not derived from the serializer. Update the `Invoice` type in `web/src/api/invoices.ts` to `amount_cents`, and update `InvoiceRow.tsx` to use `invoice.amount_cents / 100`.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"blocking\", \"title\": \"Breaking API change with no compatibility or versioning plan\", \"explanation\": \"Renaming a field in a production API response breaks every external or older consumer at deploy time, including mobile apps, integrations, and cached frontend bundles. The frontend and backend can't be deployed atomically. Either emit both `amount` and `amount_cents` for a deprecation period and then remove `amount`, or version the endpoint. Document the change and coordinate it with the consumers.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 3, \"severity\": \"nit\", \"title\": \"Internal naming is still ambiguous\", \"explanation\": \"`InvoiceRow.amount` and the DB column `amount` hold cents (see the migration comment), but the name doesn't say so. This is the ambiguity the PR sets out to remove. Consider a comment on the field, or a follow-up migration to rename the column. `payments.amount` has the same problem. This isn't required for this PR.\"}, {\"file\": \"src/serializers/invoice.ts\", \"line\": 14, \"severity\": \"nit\", \"title\": \"No test covers the serializer's response shape\", \"explanation\": \"Nothing checks the contract that this change alters. Add or update a serializer or route test that asserts `amount_cents` is present and `amount` is absent, or that both are present if you add a deprecation period.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Rename invoice amount to amount_cents\n\n`amount` is ambiguous: people reading the API assume dollars. This renames the response field to `amount_cents` so the unit is explicit.\n\n## Diff\n\n```diff\ndiff --git a/src/serializers/invoice.ts b/src/serializers/invoice.ts\nindex 653d75e..9e281b3 100644\n--- a/src/serializers/invoice.ts\n+++ b/src/serializers/invoice.ts\n@@ -11,7 +11,7 @@ export interface InvoiceRow {\n export function serializeInvoice(row: InvoiceRow) {\n   return {\n     id: row.id,\n-    amount: Number(row.amount),\n+    amount_cents: Number(row.amount),\n     currency: row.currency,\n     status: row.status,\n     period_start: row.period_start.toISOString(),\n```\n\nThe repository is checked out at this pull request's head commit in the current directory. You can read any file in it with the Read, Grep, and Glob tools before answering.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}

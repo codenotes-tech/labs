@@ -1,0 +1,83 @@
+{
+  "pr": "pr03-events-project-index",
+  "condition": "diff-checklist",
+  "rep": 3,
+  "model": "claude-sonnet-5-5",
+  "claude_code": "2.1.326 (Claude Code)",
+  "started_at": "2026-11-17T17:25:58.853Z",
+  "duration_ms": 10533,
+  "exit_code": 0,
+  "is_error": false,
+  "num_turns": 1,
+  "cost_usd": 0.011157800000000002,
+  "usage": {
+    "input_tokens": 2,
+    "cache_creation_input_tokens": 662,
+    "cache_read_input_tokens": 858,
+    "output_tokens": 842,
+    "output_tokens_details": {
+      "thinking_tokens": 0
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 662,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 842,
+        "cache_read_input_tokens": 858,
+        "cache_creation_input_tokens": 662,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 662
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "tool_calls": [],
+  "files_read": [],
+  "parse_ok": true,
+  "findings": [
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "blocking",
+      "title": "Index created without CONCURRENTLY locks writes on a large table",
+      "explanation": "A plain CREATE INDEX takes a SHARE lock on `events`, blocking all INSERT/UPDATE/DELETE for the duration of the build. The events table is likely large and write-heavy (activity feed), so this can cause an outage or request pile-up during deploy. Use `CREATE INDEX CONCURRENTLY IF NOT EXISTS ...`. Note that CONCURRENTLY cannot run inside a transaction block, so make sure the migration runner does not wrap this file in a transaction (or configure it to run this migration outside one). Also be aware that a failed concurrent build leaves an INVALID index that must be dropped before retrying."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "non-blocking",
+      "title": "Not idempotent; no IF NOT EXISTS",
+      "explanation": "If the migration is partially applied, re-run, or the index was already created manually in production (common when hot-fixing performance), the migration will fail with 'relation already exists'. Use `IF NOT EXISTS` to make it safe to re-run."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "non-blocking",
+      "title": "No evidence the index matches the actual query or is used",
+      "explanation": "The PR claims the query does a sequential scan, but the query itself and an EXPLAIN (ANALYZE) before/after are not included. Please confirm the endpoint orders by `id DESC` filtered by `project_id` (and uses keyset pagination on `id`), and that any extra filters (e.g. event type, created_at) are covered. Otherwise the index may not be used. Also check for an existing index on `project_id` that this would make redundant (extra write overhead and storage)."
+    },
+    {
+      "file": "migrations/005_events_project_idx.sql",
+      "line": 1,
+      "severity": "nit",
+      "title": "Consider explicit DESC necessity and rollback note",
+      "explanation": "Postgres can scan a (project_id, id) btree backwards, so `id DESC` is not strictly required unless mixed-direction ordering is used. It is harmless, but a short comment on the intent and a down/rollback migration (`DROP INDEX CONCURRENTLY IF EXISTS events_project_id_idx`) would help future maintainers."
+    }
+  ],
+  "result_text": "{\"findings\": [{\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"blocking\", \"title\": \"Index created without CONCURRENTLY locks writes on a large table\", \"explanation\": \"A plain CREATE INDEX takes a SHARE lock on `events`, blocking all INSERT/UPDATE/DELETE for the duration of the build. The events table is likely large and write-heavy (activity feed), so this can cause an outage or request pile-up during deploy. Use `CREATE INDEX CONCURRENTLY IF NOT EXISTS ...`. Note that CONCURRENTLY cannot run inside a transaction block, so make sure the migration runner does not wrap this file in a transaction (or configure it to run this migration outside one). Also be aware that a failed concurrent build leaves an INVALID index that must be dropped before retrying.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"non-blocking\", \"title\": \"Not idempotent; no IF NOT EXISTS\", \"explanation\": \"If the migration is partially applied, re-run, or the index was already created manually in production (common when hot-fixing performance), the migration will fail with 'relation already exists'. Use `IF NOT EXISTS` to make it safe to re-run.\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"non-blocking\", \"title\": \"No evidence the index matches the actual query or is used\", \"explanation\": \"The PR claims the query does a sequential scan, but the query itself and an EXPLAIN (ANALYZE) before/after are not included. Please confirm the endpoint orders by `id DESC` filtered by `project_id` (and uses keyset pagination on `id`), and that any extra filters (e.g. event type, created_at) are covered. Otherwise the index may not be used. Also check for an existing index on `project_id` that this would make redundant (extra write overhead and storage).\"}, {\"file\": \"migrations/005_events_project_idx.sql\", \"line\": 1, \"severity\": \"nit\", \"title\": \"Consider explicit DESC necessity and rollback note\", \"explanation\": \"Postgres can scan a (project_id, id) btree backwards, so `id DESC` is not strictly required unless mixed-direction ordering is used. It is harmless, but a short comment on the intent and a down/rollback migration (`DROP INDEX CONCURRENTLY IF EXISTS events_project_id_idx`) would help future maintainers.\"}]}",
+  "stderr": "",
+  "prompt": "Review this pull request.\n\n## Speed up the project activity feed\n\nThe project events endpoint does a sequential scan per project. Adds an index on `events (project_id, id DESC)` to match the query.\n\n## Diff\n\n```diff\ndiff --git a/migrations/005_events_project_idx.sql b/migrations/005_events_project_idx.sql\nnew file mode 100644\nindex 0000000..0586576\n--- /dev/null\n+++ b/migrations/005_events_project_idx.sql\n@@ -0,0 +1 @@\n+CREATE INDEX events_project_id_idx ON events (project_id, id DESC);\n```\n\nBefore answering, check the change specifically for: authorization and tenant isolation; race conditions and concurrent requests; database migration safety on large tables and during rolling deploys; API changes that break existing clients; retries and idempotency of side effects such as payments; date and time handling; injection; sensitive data in logs; pagination and boundary conditions.\n\nReport every problem you would raise in a code review, from blocking issues to nits. Respond with only a JSON object, no prose before or after it:\n\n{\"findings\": [{\"file\": \"path/to/file\", \"line\": <line number in the new version, or null>, \"severity\": \"blocking\" | \"non-blocking\" | \"nit\", \"title\": \"<short summary>\", \"explanation\": \"<why it matters and what to change>\"}]}\n\nUse an empty findings list if you would approve the pull request as it is. Write the review in English.\n"
+}
